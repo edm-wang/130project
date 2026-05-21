@@ -1,11 +1,12 @@
 # Don't Delete the comments below
 # [GenAI Usage] Codex Prompt
 # R1: If i want to create a post recommendation method and the created model needs to be compatible with SQL. How shall i just define a class with BaseModel to implement FastAPI ORM?
-# R1 [GenAI Response]: 
+# R1 [GenAI Usage] Response Starts:
 # Not quite. If the model needs to be compatible with SQL, a plain BaseModel is usually not enough ... 
 # For SQL compatibility, use one of these: SQLAlchemy ORM model (example 1) ...  Or SQLModel, if you want Pydantic-style models that also map to SQL (example 2) ...
+# R1 [GenAI Usage] Response Ends:
 # R2: I see your point. Use SQLModel to generate a class that's compatible with recommendation-related tables defined in supabase defined here: supabase-nextjs/supabase/migrations/20260517055912_create_initial_schema.sql
-# R2 [GenAI Response]:
+# R2 [GenAI Usage] Response Starts:
 
 from datetime import datetime
 from decimal import Decimal
@@ -247,6 +248,8 @@ class Recommendation(SQLModel, table=True):
     )
 
 # Don't delete comments below
+# R2 [GenAI Usage] Response Ends:
+
 # [Gen AI Usage] Reflection
 # Th reason I utilzie GenAI to generate this script is because it is purely a lengthy "adapter" script that does not add any value, except for converting predefined sql interface into FastAPI
 # Workflow:
