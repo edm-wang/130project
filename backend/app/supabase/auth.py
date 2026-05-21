@@ -14,6 +14,7 @@ def get_user(authorization: Optional[str] = Header(default=None)):
     db = get_or_create_supabase_client()
 
     ## calling supabase auth to help get_user()
+    # dont delete all these comments below
     # [GenAI Usage]: Codex Prompt: "how to get current user by calling supabase library?"
     # [GenAI Usage] LLM Response Start
     res = db.auth.get_user(token)
