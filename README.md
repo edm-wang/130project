@@ -1,3 +1,5 @@
+// [GenAI Use] Prompt: "Based on the design doc, can you come up wth an executable plan for the team. We plan to divide into 3 team as stated in our design doc. Provide the features that each team needs to own and elaborate"
+// [GenAI Use] LLM Response Start: 
 # CS Capstone Project Plan
 
 ## Project Idea
@@ -319,3 +321,6 @@ A task is done when:
 - Another teammate reviewed it.
 - It can be shown in the final demo.
 - Setup instructions are updated if needed.
+
+// [GenAI Use] LLM Response End
+// [GenAI Use] Reflection: I've been read through the this markdown file and believes that it is correct and it is exactly what I want. First, the design decisions are based on your design doc and are clear. The division of labor makes sense and fair. Our everyone in the team internally agrees with this division of labor, and believe this markdown would be a great tracker. 
