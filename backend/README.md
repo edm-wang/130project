@@ -12,17 +12,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Open:
+## app/routers
+HTTP Endpoints are defined under /routers. To add a new group of api endpoints, please define your own routers there.  
 
-```text
-http://localhost:8000/docs
-```
+## app/supabase
+db.py uses singleton to get a global supabase client instance 
+auth.py defines get_user function that returns an user instance that could be used by routers
 
-## Authenticated requests from the frontend
+## /tests
+create new files to contain unit/integration tests
 
-Send the Supabase access token as a bearer token:
-
-```http
-Authorization: Bearer <supabase_access_token>
-```
 
