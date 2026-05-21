@@ -24,3 +24,4 @@ def get_recommendation_batch(user=Depends(get_user)):
         "batch": batch,
         "recommendations": res.data if res.data else []
     }
+
