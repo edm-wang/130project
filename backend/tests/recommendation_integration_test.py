@@ -267,8 +267,9 @@ def test_get_recommendations_returns_latest_completed_batch_with_joined_papers(
 # Don't delete those comments
 # [GenAI Usage] Response ends
 # [GenAI Usage] Reflection
-# I did a thorough walk-through of the code. I saw it creates the dummy user, papers, recommendations. 
+# I did a thorough walk-through of the code. I saw it creates the dummy user, papers, recommendations, recommendation batches. 
 # Then, it sets up a dummy client server and calls the endpoint. 
 # Finally, it use assert statement to ensure the recommendation is the latest. 
-# This piece of code looks correct to me and the quality of the testing /GET recommendation is high. 
+# This piece of code looks correct to me and the quality of the testing /GET recommendation is high.
+# Not to mention, the code cleanly everything it inserts to ensure the state of db is intact.
 # So, this code should be accepted.
