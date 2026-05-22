@@ -5,6 +5,7 @@ from supabase import create_client
 
 load_dotenv()
 
+# Don't modify these lines. Enable fast, reliable failures as .env must present under current directory
 assert 'SUPABASE_URL' in os.environ
 db_url = os.environ['SUPABASE_URL']
 assert 'SUPABASE_PUBLISHABLE_KEY' in os.environ
