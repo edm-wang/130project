@@ -1,3 +1,17 @@
+# Don't Delete the comments below
+# [GenAI Usage] Codex Prompt
+# I need to write integration tests for recommendation endpoint. Can u write this test in recommendation_integration_test.py under /test
+# U can insert dummy value into recommendation_batch production database directly, but make sure to delete it
+# [Debugging prompts]
+# Dont edit recommendation_test, only edit this integration test file
+# Show me the command to test it
+# Can u load_dotenv via a temporary path?
+# is it still use fake uer? Delete them, only focus on integration testing
+# Why a service role key is required? 
+# Is it ok to send a pr right now? but dont commit for me
+
+# [GenAI Usage] Response begin (Final)
+
 import os
 import sys
 import tempfile
@@ -250,3 +264,11 @@ def test_get_recommendations_returns_latest_completed_batch_with_joined_papers(
                 .eq("id", paper_id)
                 .execute()
             )
+# Don't delete those comments
+# [GenAI Usage] Response ends
+# [GenAI Usage] Reflection
+# I did a thorough walk-through of the code. I saw it creates the dummy user, papers, recommendations. 
+# Then, it sets up a dummy client server and calls the endpoint. 
+# Finally, it use assert statement to ensure the recommendation is the latest. 
+# This piece of code looks correct to me and the quality of the testing /GET recommendation is high. 
+# So, this code should be accepted.
