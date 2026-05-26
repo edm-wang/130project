@@ -1,0 +1,24 @@
+.chip {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 10px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+}
+
+.selected {
+  background: #e1f5ee;
+  color: var(--color-brand-deep);
+  border-color: var(--color-brand-soft);
+}
+
+.outline {
+  border-radius: 20px;
+  background: none;
+  padding: 4px 10px;
+}
+
+.outline.selected {
+  background: #e1f5ee;
+}

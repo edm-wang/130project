@@ -1,0 +1,102 @@
+/* Shared shell for every right/left-column widget. */
+.widget {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  margin-bottom: 10px;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.statRow:last-child {
+  border-bottom: none;
+}
+.statLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.statVal {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.researcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.researcher:last-child {
+  border-bottom: none;
+}
+.researcherName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.researcherAffil {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.viewAllBtn {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 11px;
+  padding: 6px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.linkBtn {
+  text-align: left;
+  padding: 6px 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: var(--border-radius-md);
+  display: block;
+  width: 100%;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.emailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}

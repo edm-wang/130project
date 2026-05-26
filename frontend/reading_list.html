@@ -1,0 +1,427 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&family=DM+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--color-background-tertiary); }
+
+  .nav { display:flex; align-items:center; justify-content:space-between; padding:0 28px; height:52px; background:var(--color-background-primary); border-bottom:0.5px solid var(--color-border-tertiary); }
+  .logo { font-family:'DM Serif Display',serif; font-size:20px; color:var(--color-text-primary); letter-spacing:-0.5px; }
+  .logo span { color:#1D9E75; }
+  .nav-links { display:flex; gap:4px; }
+  .nav-link { font-size:13px; padding:5px 10px; border-radius:var(--border-radius-md); color:var(--color-text-secondary); cursor:pointer; border:none; background:none; }
+  .nav-link.active { background:var(--color-background-secondary); color:var(--color-text-primary); font-weight:500; }
+  .nav-avatar { width:30px; height:30px; border-radius:50%; background:#9FE1CB; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#085041; }
+
+  .page-tabs { background:var(--color-background-primary); border-bottom:0.5px solid var(--color-border-tertiary); padding:0 28px; display:flex; }
+  .page-tab { padding:11px 16px; font-size:13px; cursor:pointer; border:none; background:none; color:var(--color-text-secondary); border-bottom:2px solid transparent; margin-bottom:-0.5px; }
+  .page-tab.active { color:#1D9E75; border-bottom-color:#1D9E75; font-weight:500; }
+
+  .body { display:grid; grid-template-columns:1fr 280px; gap:20px; padding:24px 28px; max-width:1100px; margin:0 auto; }
+
+  .card { background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:18px 20px; margin-bottom:16px; }
+  .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .card-title { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:var(--color-text-tertiary); }
+  .card-action { font-size:12px; color:#1D9E75; background:none; border:none; cursor:pointer; }
+
+  .rl-filter-row { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .rl-chip { font-size:11px; padding:4px 10px; border-radius:20px; border:0.5px solid var(--color-border-tertiary); background:none; color:var(--color-text-secondary); cursor:pointer; }
+  .rl-chip.sel { background:#E1F5EE; color:#0F6E56; border-color:#5DCAA5; }
+
+  .rl-paper { display:flex; gap:12px; padding:14px 0; border-bottom:0.5px solid var(--color-border-tertiary); }
+  .rl-paper:last-child { border-bottom:none; }
+  .rl-num { font-family:'DM Mono',monospace; font-size:11px; color:var(--color-text-tertiary); min-width:18px; padding-top:2px; }
+  .rl-content { flex:1; }
+  .rl-title { font-size:13px; font-weight:500; color:var(--color-text-primary); line-height:1.4; margin-bottom:3px; cursor:pointer; }
+  .rl-title:hover { color:#1D9E75; }
+  .rl-meta { font-size:11px; color:var(--color-text-tertiary); margin-bottom:6px; }
+  .rl-badges { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
+  .rl-badge { font-size:10px; padding:2px 7px; border-radius:10px; }
+  .rl-badge.cat { background:#EEEDFE; color:#534AB7; }
+  .rl-badge.new { background:#EAF3DE; color:#3B6D11; }
+  .rl-badge.read { background:var(--color-background-secondary); color:var(--color-text-tertiary); }
+  .rl-actions { display:flex; gap:6px; }
+  .rl-btn { font-size:11px; padding:4px 10px; border:0.5px solid var(--color-border-tertiary); border-radius:10px; background:none; cursor:pointer; color:var(--color-text-secondary); }
+  .rl-btn:hover { background:var(--color-background-secondary); }
+
+  /* video player */
+  .vp-shell { border-radius:10px; overflow:hidden; background:#0C1520; }
+  .vp-screen { width:100%; aspect-ratio:16/9; position:relative; overflow:hidden; }
+  .vp-slide { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px 28px; opacity:0; transition:opacity 0.5s; pointer-events:none; }
+  .vp-slide.active { opacity:1; }
+
+  .s0 { background:linear-gradient(135deg,#0C1520,#0F2535); }
+  .s0-badge { font-size:9px; font-family:'DM Mono',monospace; letter-spacing:0.1em; color:#1D9E75; border:1px solid rgba(29,158,117,0.4); padding:3px 10px; border-radius:20px; margin-bottom:12px; }
+  .s0-title { font-family:'DM Serif Display',serif; font-size:18px; color:#fff; text-align:center; line-height:1.35; margin-bottom:8px; }
+  .s0-sub { font-size:10px; color:rgba(255,255,255,0.3); font-family:'DM Mono',monospace; text-align:center; }
+
+  .s1 { background:#0F1E2C; }
+  .s2 { background:#0D1B28; }
+  .s3 { background:#071A12; }
+  .s4 { background:#1A0C1A; }
+  .s5 { background:#0C1520; }
+
+  .s-label { font-size:9px; font-family:'DM Mono',monospace; letter-spacing:0.1em; color:#1D9E75; margin-bottom:6px; text-align:center; }
+  .s-ptitle { font-family:'DM Serif Display',serif; font-size:15px; color:#fff; text-align:center; line-height:1.35; margin-bottom:5px; }
+  .s-authors { font-size:10px; color:rgba(255,255,255,0.38); text-align:center; margin-bottom:13px; }
+  .s-insight { background:rgba(29,158,117,0.1); border:1px solid rgba(29,158,117,0.25); border-radius:8px; padding:10px 16px; font-size:11px; color:#9FE1CB; line-height:1.65; text-align:center; max-width:340px; }
+
+  .bar-chart { display:flex; align-items:flex-end; gap:10px; height:88px; margin-bottom:8px; }
+  .bar-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+  .bar { width:100%; border-radius:3px 3px 0 0; }
+  .bar-lbl { font-size:8px; color:rgba(255,255,255,0.3); font-family:'DM Mono',monospace; text-align:center; line-height:1.3; }
+  .bar-val { font-size:9px; color:rgba(255,255,255,0.6); font-weight:500; }
+
+  .big-stat { font-family:'DM Serif Display',serif; font-size:38px; color:#1D9E75; line-height:1; margin-bottom:4px; }
+  .stat-desc { font-size:11px; color:rgba(255,255,255,0.45); text-align:center; line-height:1.6; max-width:260px; }
+
+  .cluster-row { display:flex; justify-content:space-between; align-items:center; border-radius:6px; padding:7px 12px; margin-bottom:6px; }
+
+  .s5-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; max-width:320px; }
+  .s5-cell { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.08); border-radius:6px; padding:8px 10px; }
+  .s5-num { font-family:'DM Serif Display',serif; font-size:22px; color:#1D9E75; }
+  .s5-lbl { font-size:9px; color:rgba(255,255,255,0.3); font-family:'DM Mono',monospace; letter-spacing:0.05em; margin-top:2px; }
+
+  .vp-controls { background:#09111A; padding:10px 16px 12px; }
+  .vp-prog-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .vp-track { flex:1; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; cursor:pointer; }
+  .vp-fill { height:100%; background:#1D9E75; border-radius:2px; transition:width 0.3s linear; }
+  .vp-time { font-family:'DM Mono',monospace; font-size:10px; color:rgba(255,255,255,0.4); min-width:32px; }
+  .vp-ctrl-row { display:flex; align-items:center; gap:10px; }
+  .vp-playbtn { width:36px; height:36px; border-radius:50%; background:#1D9E75; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .vp-playbtn:hover { background:#5DCAA5; }
+  .play-icon { width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid white; margin-left:2px; }
+  .pause-icon { display:flex; gap:3px; }
+  .pause-bar { width:3px; height:13px; background:white; border-radius:1px; }
+  .vp-ch-lbl { font-size:11px; color:rgba(255,255,255,0.4); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .spd { font-size:10px; color:rgba(255,255,255,0.35); background:none; border:0.5px solid rgba(255,255,255,0.1); border-radius:4px; padding:2px 6px; cursor:pointer; font-family:'DM Mono',monospace; }
+  .spd.sel { color:#9FE1CB; border-color:rgba(29,158,117,0.4); }
+
+  .ch-list { display:flex; flex-direction:column; margin-top:14px; }
+  .ch-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--color-border-tertiary); cursor:pointer; }
+  .ch-item:last-child { border-bottom:none; }
+  .ch-dot { width:6px; height:6px; border-radius:50%; background:var(--color-border-secondary); margin-top:4px; flex-shrink:0; transition:background 0.2s; }
+  .ch-item.active .ch-dot { background:#1D9E75; }
+  .ch-time { font-family:'DM Mono',monospace; font-size:10px; color:#1D9E75; min-width:34px; padding-top:1px; }
+  .ch-info { flex:1; }
+  .ch-title { font-size:12px; color:var(--color-text-secondary); line-height:1.35; }
+  .ch-item.active .ch-title { color:var(--color-text-primary); font-weight:500; }
+  .ch-sub { font-size:10px; color:var(--color-text-tertiary); margin-top:1px; }
+
+  .right-card { background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:16px 18px; margin-bottom:16px; }
+  .right-title { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.07em; color:var(--color-text-tertiary); margin-bottom:12px; }
+  .stat-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:0.5px solid var(--color-border-tertiary); }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-lbl { font-size:12px; color:var(--color-text-secondary); }
+  .stat-val { font-size:15px; font-weight:500; color:var(--color-text-primary); }
+  .gen-done { display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:var(--border-radius-md); font-size:12px; margin-bottom:10px; background:#E1F5EE; color:#0F6E56; }
+  .gen-dot { width:7px; height:7px; border-radius:50%; background:#1D9E75; flex-shrink:0; }
+  .action-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 13px; font-size:12px; border:0.5px solid var(--color-border-tertiary); border-radius:20px; background:none; cursor:pointer; color:var(--color-text-secondary); }
+  .action-btn:hover { background:var(--color-background-secondary); }
+</style>
+
+<div>
+<h2 class="sr-only">Paper Aggregator — reading list and daily feed digest video</h2>
+
+<nav class="nav">
+  <div class="logo">Paper<span>Agg</span></div>
+  <div class="nav-links">
+    <button class="nav-link">Feed</button>
+    <button class="nav-link active">Reading List</button>
+    <button class="nav-link">Discover</button>
+    <button class="nav-link">Settings</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:12px;color:var(--color-text-secondary);">Alex Chen</span>
+    <div class="nav-avatar">AC</div>
+  </div>
+</nav>
+
+<div class="page-tabs">
+  <button class="page-tab active">Reading List</button>
+  <button class="page-tab">Today's Digest Video</button>
+</div>
+
+<div class="body">
+  <div>
+
+    <!-- READING LIST -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Reading List · 3 papers</div>
+        <button class="card-action">Sort by date ↕</button>
+      </div>
+      <div class="rl-filter-row">
+        <button class="rl-chip sel">All</button>
+        <button class="rl-chip">Alignment</button>
+        <button class="rl-chip">Generative Models</button>
+        <button class="rl-chip">Efficiency</button>
+        <button class="rl-chip">Unread</button>
+      </div>
+
+      <div class="rl-paper">
+        <div class="rl-num">1</div>
+        <div class="rl-content">
+          <div class="rl-title">Scaling Laws for Reward Model Generalization in RLHF Training</div>
+          <div class="rl-meta">Patel et al. · Crestfield Inst. of Technology · Apr 23</div>
+          <div class="rl-badges">
+            <span class="rl-badge cat">Alignment</span>
+            <span class="rl-badge cat">Scaling</span>
+            <span class="rl-badge new">New</span>
+          </div>
+          <div class="rl-actions">
+            <button class="rl-btn">↗ Open</button>
+            <button class="rl-btn">✦ Text summary</button>
+            <button class="rl-btn">Edit category</button>
+            <button class="rl-btn">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rl-paper">
+        <div class="rl-num">2</div>
+        <div class="rl-content">
+          <div class="rl-title">Diffusion Language Models via Score Matching on Discrete Token Spaces</div>
+          <div class="rl-meta">Nakamura et al. · Bayside University · Apr 23</div>
+          <div class="rl-badges">
+            <span class="rl-badge cat">Generative Models</span>
+            <span class="rl-badge new">New</span>
+          </div>
+          <div class="rl-actions">
+            <button class="rl-btn">↗ Open</button>
+            <button class="rl-btn">✦ Text summary</button>
+            <button class="rl-btn">Edit category</button>
+            <button class="rl-btn">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rl-paper">
+        <div class="rl-num">3</div>
+        <div class="rl-content">
+          <div class="rl-title">FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-Precision</div>
+          <div class="rl-meta">Rivera et al. · Northgate Technical University · Apr 18</div>
+          <div class="rl-badges">
+            <span class="rl-badge cat">Efficiency</span>
+            <span class="rl-badge read">Read</span>
+          </div>
+          <div class="rl-actions">
+            <button class="rl-btn">↗ Open</button>
+            <button class="rl-btn">✦ Text summary</button>
+            <button class="rl-btn">Edit category</button>
+            <button class="rl-btn">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAILY DIGEST VIDEO -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">▶ Today's Feed — Digest Video</div>
+        <button class="card-action">Download</button>
+      </div>
+      <div class="gen-done" style="margin-bottom:14px;">
+        <div class="gen-dot"></div>
+        Digest video generated · Apr 23, 2026 at 6:30 AM · 12 papers · 18 min 40 sec
+      </div>
+
+      <div class="vp-shell">
+        <div class="vp-screen">
+
+          <div class="vp-slide s0 active" id="sl0">
+            <div class="s0-badge">DAILY DIGEST · APR 23, 2026</div>
+            <div class="s0-title">Today's Research Feed<br>12 Papers · AI & Machine Learning</div>
+            <div class="s0-sub" style="margin-top:10px;">WESTLAKE UNIVERSITY OF SCIENCE · ALEX CHEN</div>
+          </div>
+
+          <div class="vp-slide s1" id="sl1">
+            <div class="s-label">PAPER 1 OF 12</div>
+            <div class="s-ptitle">Scaling Laws for Reward Model<br>Generalization in RLHF Training</div>
+            <div class="s-authors">Patel et al. · Crestfield Inst. of Technology</div>
+            <div class="s-insight">Reward model capacity is the primary bottleneck in RLHF — scaling it proportionally to the policy model reduces reward hacking by <strong style="color:#fff;">2.3×</strong> on held-out evals.</div>
+          </div>
+
+          <div class="vp-slide s2" id="sl2">
+            <div class="s-label">PAPER 2 OF 12</div>
+            <div class="s-ptitle">Diffusion Language Models via Score<br>Matching on Discrete Token Spaces</div>
+            <div class="s-authors">Nakamura et al. · Bayside University</div>
+            <div style="margin-top:10px;">
+              <div class="bar-chart">
+                <div class="bar-wrap"><div class="bar-val">78%</div><div class="bar" style="height:78px;background:rgba(29,158,117,0.35);"></div><div class="bar-lbl">AR<br>baseline</div></div>
+                <div class="bar-wrap"><div class="bar-val">81%</div><div class="bar" style="height:81px;background:rgba(29,158,117,0.55);"></div><div class="bar-lbl">Masked<br>diffusion</div></div>
+                <div class="bar-wrap"><div class="bar-val">87%</div><div class="bar" style="height:87px;background:#1D9E75;"></div><div class="bar-lbl">Score<br>matching</div></div>
+              </div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.25);font-family:'DM Mono',monospace;text-align:center;">LAMBADA next-word accuracy</div>
+            </div>
+          </div>
+
+          <div class="vp-slide s3" id="sl3">
+            <div class="s-label">PAPER 3 OF 12</div>
+            <div class="s-ptitle">FlashAttention-3: Fast and Accurate<br>Attention with Asynchrony</div>
+            <div class="s-authors">Rivera et al. · Northgate Technical University</div>
+            <div style="margin-top:14px;display:flex;gap:22px;">
+              <div style="text-align:center;"><div class="big-stat" style="font-size:28px;">1.8×</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">faster on H100</div></div>
+              <div style="text-align:center;"><div class="big-stat" style="font-size:28px;">740</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">TFLOPS/s</div></div>
+              <div style="text-align:center;"><div class="big-stat" style="font-size:28px;">−41%</div><div style="font-size:10px;color:rgba(255,255,255,0.4);">memory use</div></div>
+            </div>
+          </div>
+
+          <div class="vp-slide s4" id="sl4">
+            <div class="s-label">PAPERS 4 – 12 · THEME CLUSTERS</div>
+            <div class="s-ptitle" style="margin-bottom:14px;">Key Themes Across<br>Remaining Papers</div>
+            <div style="width:100%;max-width:320px;">
+              <div class="cluster-row" style="background:rgba(29,158,117,0.08);border:0.5px solid rgba(29,158,117,0.2);margin-bottom:6px;">
+                <span style="font-size:11px;color:rgba(255,255,255,0.7);">Alignment & RLHF</span>
+                <span style="font-size:10px;font-family:'DM Mono',monospace;color:#9FE1CB;">5 papers</span>
+              </div>
+              <div class="cluster-row" style="background:rgba(143,119,221,0.08);border:0.5px solid rgba(143,119,221,0.2);margin-bottom:6px;">
+                <span style="font-size:11px;color:rgba(255,255,255,0.7);">Generative Models</span>
+                <span style="font-size:10px;font-family:'DM Mono',monospace;color:#AFA9EC;">3 papers</span>
+              </div>
+              <div class="cluster-row" style="background:rgba(239,159,39,0.08);border:0.5px solid rgba(239,159,39,0.2);">
+                <span style="font-size:11px;color:rgba(255,255,255,0.7);">Efficiency & Scaling</span>
+                <span style="font-size:10px;font-family:'DM Mono',monospace;color:#FAC775;">4 papers</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="vp-slide s5" id="sl5">
+            <div class="s-label">TODAY'S FEED · SUMMARY</div>
+            <div class="s-ptitle" style="margin-bottom:14px;">12 Papers Reviewed</div>
+            <div class="s5-grid">
+              <div class="s5-cell"><div class="s5-num">12</div><div class="s5-lbl">PAPERS TODAY</div></div>
+              <div class="s5-cell"><div class="s5-num">5</div><div class="s5-lbl">ALIGNMENT</div></div>
+              <div class="s5-cell"><div class="s5-num">94%</div><div class="s5-lbl">AVG MATCH</div></div>
+              <div class="s5-cell"><div class="s5-num">3</div><div class="s5-lbl">SAVED</div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="vp-controls">
+          <div class="vp-prog-row">
+            <span class="vp-time" id="vpT">0:00</span>
+            <div class="vp-track" id="vpTrack"><div class="vp-fill" id="vpFill" style="width:0%"></div></div>
+            <span class="vp-time" style="text-align:right;">18:40</span>
+          </div>
+          <div class="vp-ctrl-row">
+            <button class="vp-playbtn" id="vpBtn" onclick="vpToggle()"><div class="play-icon" id="vpIcon"></div></button>
+            <span class="vp-ch-lbl" id="vpLbl">Intro — Today's feed overview</span>
+            <button class="spd sel" onclick="vpSpd(1,this)">1×</button>
+            <button class="spd" onclick="vpSpd(1.5,this)">1.5×</button>
+            <button class="spd" onclick="vpSpd(2,this)">2×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ch-list" id="chList">
+        <div class="ch-item active" onclick="vpJump(0)"><div class="ch-dot"></div><div class="ch-time">0:00</div><div class="ch-info"><div class="ch-title">Intro — Today's feed overview</div><div class="ch-sub">12 papers · Apr 23, 2026</div></div></div>
+        <div class="ch-item" onclick="vpJump(1)"><div class="ch-dot"></div><div class="ch-time">1:20</div><div class="ch-info"><div class="ch-title">Paper 1 — Scaling Laws for Reward Model Generalization</div><div class="ch-sub">Patel et al. · Crestfield Inst.</div></div></div>
+        <div class="ch-item" onclick="vpJump(2)"><div class="ch-dot"></div><div class="ch-time">4:45</div><div class="ch-info"><div class="ch-title">Paper 2 — Diffusion Language Models via Score Matching</div><div class="ch-sub">Nakamura et al. · Bayside University</div></div></div>
+        <div class="ch-item" onclick="vpJump(3)"><div class="ch-dot"></div><div class="ch-time">8:10</div><div class="ch-info"><div class="ch-title">Paper 3 — FlashAttention-3</div><div class="ch-sub">Rivera et al. · Northgate Technical Univ.</div></div></div>
+        <div class="ch-item" onclick="vpJump(4)"><div class="ch-dot"></div><div class="ch-time">11:30</div><div class="ch-info"><div class="ch-title">Papers 4–12 — Key themes overview</div><div class="ch-sub">Alignment · Generative Models · Efficiency</div></div></div>
+        <div class="ch-item" onclick="vpJump(5)"><div class="ch-dot"></div><div class="ch-time">17:20</div><div class="ch-info"><div class="ch-title">Feed summary & stats</div><div class="ch-sub">12 papers reviewed today</div></div></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--color-border-tertiary);">
+        <button class="action-btn" style="font-size:11px;">Re-generate digest</button>
+        <button class="action-btn" style="font-size:11px;">Download video</button>
+        <button class="action-btn" style="font-size:11px;">Email to me</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <aside>
+    <div class="right-card">
+      <div class="right-title">Reading List Stats</div>
+      <div class="stat-row"><span class="stat-lbl">Total saved</span><span class="stat-val">3</span></div>
+      <div class="stat-row"><span class="stat-lbl">Read</span><span class="stat-val">1</span></div>
+      <div class="stat-row"><span class="stat-lbl">Unread</span><span class="stat-val">2</span></div>
+      <div class="stat-row"><span class="stat-lbl">With summaries</span><span class="stat-val">3</span></div>
+      <div class="stat-row"><span class="stat-lbl">Categories</span><span class="stat-val">3</span></div>
+    </div>
+
+    <div class="right-card">
+      <div class="right-title">Categories</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;padding:3px 9px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Alignment</span>
+          <span style="font-size:12px;color:var(--color-text-tertiary);">1 paper</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;padding:3px 9px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Generative Models</span>
+          <span style="font-size:12px;color:var(--color-text-tertiary);">1 paper</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;padding:3px 9px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Efficiency</span>
+          <span style="font-size:12px;color:var(--color-text-tertiary);">1 paper</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-card">
+      <div class="right-title">Digest Video</div>
+      <div class="gen-done" style="font-size:11px;margin-bottom:10px;">
+        <div class="gen-dot"></div>
+        Generated today · 18 min 40 sec
+      </div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);line-height:1.7;margin-bottom:10px;">Covers all 12 papers from today's feed with visual summaries, key stats, and topic clusters.</div>
+      <button class="action-btn" style="width:100%;justify-content:center;font-size:12px;">▶ Watch digest</button>
+    </div>
+  </aside>
+</div>
+</div>
+
+<script>
+  const TOTAL = 1120;
+  const CHS = [
+    { start:0,    slide:0, label:"Intro — Today's feed overview" },
+    { start:80,   slide:1, label:"Paper 1 — Scaling Laws for Reward Model Generalization" },
+    { start:285,  slide:2, label:"Paper 2 — Diffusion Language Models via Score Matching" },
+    { start:490,  slide:3, label:"Paper 3 — FlashAttention-3" },
+    { start:690,  slide:4, label:"Papers 4–12 — Key themes overview" },
+    { start:1040, slide:5, label:"Feed summary & stats" }
+  ];
+  let playing=false, elapsed=0, spd=1, raf=null, lastTs=null, curSlide=0;
+
+  function fmt(s){ const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
+  function getCh(t){ let i=0; CHS.forEach((c,j)=>{ if(t>=c.start) i=j; }); return i; }
+  function showSlide(idx){
+    if(idx===curSlide) return;
+    document.getElementById('sl'+curSlide).classList.remove('active');
+    document.getElementById('sl'+idx).classList.add('active');
+    curSlide=idx;
+  }
+  function updateUI(){
+    document.getElementById('vpFill').style.width=(elapsed/TOTAL*100)+'%';
+    document.getElementById('vpT').textContent=fmt(elapsed);
+    const ci=getCh(elapsed);
+    document.getElementById('vpLbl').textContent=CHS[ci].label;
+    showSlide(CHS[ci].slide);
+    [...document.getElementById('chList').children].forEach((c,i)=>c.classList.toggle('active',i===ci));
+  }
+  function step(ts){
+    if(!lastTs) lastTs=ts;
+    elapsed=Math.min(elapsed+(ts-lastTs)/1000*spd,TOTAL);
+    lastTs=ts;
+    updateUI();
+    if(elapsed>=TOTAL){ playing=false; setPlay(); return; }
+    if(playing) raf=requestAnimationFrame(step);
+  }
+  function setPlay(){ document.getElementById('vpIcon').outerHTML='<div class="play-icon" id="vpIcon"></div>'; }
+  function setPause(){ document.getElementById('vpIcon').outerHTML='<div class="pause-icon" id="vpIcon"><div class="pause-bar"></div><div class="pause-bar"></div></div>'; }
+  function vpToggle(){
+    playing=!playing;
+    if(playing){ if(elapsed>=TOTAL) elapsed=0; lastTs=null; setPause(); raf=requestAnimationFrame(step); }
+    else{ cancelAnimationFrame(raf); setPlay(); }
+  }
+  function vpJump(ci){ elapsed=CHS[ci].start; lastTs=null; updateUI(); }
+  function vpSpd(s,btn){ spd=s; document.querySelectorAll('.spd').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); }
+  document.getElementById('vpTrack').addEventListener('click',function(e){
+    elapsed=((e.clientX-this.getBoundingClientRect().left)/this.getBoundingClientRect().width)*TOTAL;
+    lastTs=null; updateUI();
+  });
+  updateUI();
+</script>

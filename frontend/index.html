@@ -1,0 +1,248 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&family=DM+Mono&display=swap');
+  .pa-root { font-family: 'DM Sans', var(--font-sans); background: var(--color-background-tertiary); min-height: 100vh; }
+  .pa-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 52px; background: var(--color-background-primary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .pa-logo { font-family: 'DM Serif Display', var(--font-serif); font-size: 20px; color: var(--color-text-primary); letter-spacing: -0.5px; }
+  .pa-logo span { color: #1D9E75; }
+  .pa-nav-links { display: flex; gap: 4px; }
+  .pa-nav-link { font-size: 13px; padding: 5px 10px; border-radius: var(--border-radius-md); color: var(--color-text-secondary); cursor: pointer; border: none; background: none; }
+  .pa-nav-link.active { background: var(--color-background-secondary); color: var(--color-text-primary); font-weight: 500; }
+  .pa-avatar { width: 30px; height: 30px; border-radius: 50%; background: #9FE1CB; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #085041; cursor: pointer; }
+  .pa-body { display: grid; grid-template-columns: 220px 1fr 200px; gap: 20px; padding: 20px 28px; max-width: 1100px; margin: 0 auto; }
+  .pa-sidebar { display: flex; flex-direction: column; gap: 14px; }
+  .pa-widget { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px 16px; }
+  .pa-widget-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-tertiary); margin-bottom: 10px; }
+  .pa-tag { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; margin: 3px 2px; cursor: pointer; }
+  .pa-tag.field { background: #E1F5EE; color: #0F6E56; }
+  .pa-tag.topic { background: #E6F1FB; color: #185FA5; }
+  .pa-tag.author { background: #FAEEDA; color: #854F0B; }
+  .pa-tag.keyword { background: #EEEDFE; color: #534AB7; }
+  .pa-add-btn { width: 100%; padding: 7px; font-size: 12px; color: var(--color-text-secondary); background: var(--color-background-secondary); border: 0.5px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); cursor: pointer; margin-top: 8px; }
+  .pa-feed { display: flex; flex-direction: column; gap: 14px; }
+  .pa-feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .pa-feed-title { font-family: 'DM Serif Display', var(--font-serif); font-size: 18px; color: var(--color-text-primary); }
+  .pa-feed-sub { font-size: 12px; color: var(--color-text-tertiary); }
+  .pa-batch-pill { font-size: 11px; padding: 3px 9px; background: #EAF3DE; color: #3B6D11; border-radius: 20px; }
+  .pa-paper { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px 18px; position: relative; }
+  .pa-paper.unread { border-left: 2px solid #1D9E75; }
+  .pa-paper-source { font-family: 'DM Mono', var(--font-mono); font-size: 10px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .pa-paper-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); line-height: 1.4; margin-bottom: 5px; cursor: pointer; }
+  .pa-paper-title:hover { color: #1D9E75; }
+  .pa-paper-authors { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+  .pa-paper-abstract { font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pa-reason { font-size: 11px; background: #E1F5EE; border-radius: var(--border-radius-md); padding: 5px 9px; color: #0F6E56; margin-bottom: 10px; line-height: 1.5; }
+  .pa-reason-label { font-weight: 500; }
+  .pa-paper-actions { display: flex; align-items: center; gap: 8px; }
+  .pa-vote-btn { display: flex; align-items: center; gap: 4px; padding: 4px 9px; font-size: 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; background: none; cursor: pointer; color: var(--color-text-secondary); }
+  .pa-vote-btn.up:hover { background: #E1F5EE; color: #0F6E56; border-color: #5DCAA5; }
+  .pa-vote-btn.down:hover { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
+  .pa-vote-btn.up.active { background: #E1F5EE; color: #0F6E56; border-color: #5DCAA5; }
+  .pa-save-btn { display: flex; align-items: center; gap: 4px; padding: 4px 9px; font-size: 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; background: none; cursor: pointer; color: var(--color-text-secondary); margin-left: auto; }
+  .pa-save-btn:hover { background: var(--color-background-secondary); }
+  .pa-save-btn.saved { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+  .pa-link-btn { display: flex; align-items: center; gap: 4px; padding: 4px 9px; font-size: 12px; border: none; background: none; cursor: pointer; color: var(--color-text-tertiary); }
+  .pa-link-btn:hover { color: var(--color-text-primary); }
+  .pa-summary-btn { padding: 4px 9px; font-size: 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; background: none; cursor: pointer; color: var(--color-text-secondary); }
+  .pa-summary-btn:hover { background: #EEEDFE; color: #534AB7; border-color: #AFA9EC; }
+  .pa-right { display: flex; flex-direction: column; gap: 14px; }
+  .pa-stat { text-align: center; padding: 10px 0; }
+  .pa-stat-num { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+  .pa-stat-label { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .pa-divider { height: 0.5px; background: var(--color-border-tertiary); margin: 4px 0; }
+  .pa-researcher { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .pa-researcher:last-child { border-bottom: none; }
+  .pa-researcher-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+  .pa-researcher-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+  .pa-researcher-affil { font-size: 11px; color: var(--color-text-tertiary); }
+  .pa-shared { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #E1F5EE; color: #0F6E56; margin-top: 2px; display: inline-block; }
+  .pa-email-row { display: flex; align-items: center; justify-content: space-between; }
+  .pa-toggle { width: 32px; height: 18px; background: #1D9E75; border-radius: 9px; position: relative; cursor: pointer; flex-shrink: 0; }
+  .pa-toggle::after { content: ''; position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; top: 2px; right: 2px; }
+  .pa-chip { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+  .pa-chip.sel { background: #E1F5EE; color: #0F6E56; border-color: #5DCAA5; }
+</style>
+
+<div class="pa-root">
+  <h2 class="sr-only">Paper Aggregator — personalized research feed dashboard</h2>
+
+  <nav class="pa-nav">
+    <div class="pa-logo">Paper<span>Agg</span></div>
+    <div class="pa-nav-links">
+      <button class="pa-nav-link active">Feed</button>
+      <button class="pa-nav-link">Reading List</button>
+      <button class="pa-nav-link">Discover</button>
+      <button class="pa-nav-link">Settings</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--color-text-secondary);">Alex Chen</span>
+      <div class="pa-avatar">AC</div>
+    </div>
+  </nav>
+
+  <div class="pa-body">
+
+    <aside class="pa-sidebar">
+      <div class="pa-widget">
+        <div class="pa-widget-title">Research Interests</div>
+        <div>
+          <span class="pa-tag field">Machine Learning</span>
+          <span class="pa-tag field">NLP</span>
+          <span class="pa-tag topic">Transformers</span>
+          <span class="pa-tag topic">RLHF</span>
+          <span class="pa-tag author">Y. LeCun</span>
+          <span class="pa-tag keyword">diffusion models</span>
+          <span class="pa-tag keyword">alignment</span>
+        </div>
+        <button class="pa-add-btn">+ Add interest</button>
+      </div>
+
+      <div class="pa-widget">
+        <div class="pa-widget-title">Legend</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);"><span class="pa-tag field" style="margin:0;padding:2px 7px;">Field</span> Broad area</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);"><span class="pa-tag topic" style="margin:0;padding:2px 7px;">Topic</span> Specific topic</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);"><span class="pa-tag author" style="margin:0;padding:2px 7px;">Author</span> Researcher</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);"><span class="pa-tag keyword" style="margin:0;padding:2px 7px;">Keyword</span> Term</div>
+        </div>
+      </div>
+
+      <div class="pa-widget">
+        <div class="pa-widget-title">Email Digest</div>
+        <div class="pa-email-row" style="margin-bottom:10px;">
+          <span style="font-size:12px;color:var(--color-text-secondary);">Enabled</span>
+          <div class="pa-toggle"></div>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;">Frequency</div>
+        <div style="display:flex;gap:4px;">
+          <span class="pa-chip">Daily</span>
+          <span class="pa-chip sel">Weekly</span>
+          <span class="pa-chip">Monthly</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="pa-feed">
+      <div class="pa-feed-header">
+        <div>
+          <div class="pa-feed-title">Today's Feed</div>
+          <div class="pa-feed-sub">Thursday, April 23 · 12 papers</div>
+        </div>
+        <span class="pa-batch-pill">Daily batch · generated 6:00 AM</span>
+      </div>
+
+      <div class="pa-paper unread">
+        <div class="pa-paper-source">arXiv · cs.LG · Apr 23</div>
+        <div class="pa-paper-title">Scaling Laws for Reward Model Generalization in RLHF Training</div>
+        <div class="pa-paper-authors">J. Schulman, I. Ziegler, O. Stiennon · OpenAI</div>
+        <div class="pa-paper-abstract">We study how reward model performance scales with model size, dataset size, and compute budget, finding consistent power-law behavior analogous to those observed in language model pretraining. Our results suggest that reward model capacity is a key bottleneck in...</div>
+        <div class="pa-reason"><span class="pa-reason-label">Why recommended: </span>Matches your topic interest "RLHF" and keyword "alignment"</div>
+        <div class="pa-paper-actions">
+          <button class="pa-vote-btn up active">▲ 142</button>
+          <button class="pa-vote-btn down">▼ 8</button>
+          <button class="pa-summary-btn">✦ Summarize</button>
+          <button class="pa-link-btn">↗ arXiv</button>
+          <button class="pa-save-btn saved">★ Saved</button>
+        </div>
+      </div>
+
+      <div class="pa-paper unread">
+        <div class="pa-paper-source">arXiv · cs.CL · Apr 23</div>
+        <div class="pa-paper-title">Diffusion Language Models via Score Matching on Discrete Token Spaces</div>
+        <div class="pa-paper-authors">Y. Song, C. Meng, S. Ermon · Stanford University</div>
+        <div class="pa-paper-abstract">We propose a framework for applying diffusion-based generative modeling to discrete sequences by defining noise processes on token embedding manifolds. This approach unifies autoregressive and diffusion paradigms and achieves competitive perplexity with...</div>
+        <div class="pa-reason"><span class="pa-reason-label">Why recommended: </span>Matches your keyword "diffusion models" and field "NLP"</div>
+        <div class="pa-paper-actions">
+          <button class="pa-vote-btn up">▲ 87</button>
+          <button class="pa-vote-btn down">▼ 3</button>
+          <button class="pa-summary-btn">✦ Summarize</button>
+          <button class="pa-link-btn">↗ arXiv</button>
+          <button class="pa-save-btn">☆ Save</button>
+        </div>
+      </div>
+
+      <div class="pa-paper">
+        <div class="pa-paper-source">arXiv · cs.AI · Apr 22</div>
+        <div class="pa-paper-title">Constitutional AI at Scale: Lessons from Training Frontier Models with Human Feedback</div>
+        <div class="pa-paper-authors">A. Bai, S. Kadavath, S. Kundu · Anthropic</div>
+        <div class="pa-paper-abstract">We present an updated analysis of Constitutional AI training across model scales from 1B to 100B parameters, examining how alignment properties emerge and degrade with scale. We find that larger models require more nuanced constitutional principles to avoid...</div>
+        <div class="pa-reason"><span class="pa-reason-label">Why recommended: </span>Matches your keyword "alignment" and topic "RLHF"</div>
+        <div class="pa-paper-actions">
+          <button class="pa-vote-btn up">▲ 231</button>
+          <button class="pa-vote-btn down">▼ 11</button>
+          <button class="pa-summary-btn">✦ Summarize</button>
+          <button class="pa-link-btn">↗ arXiv</button>
+          <button class="pa-save-btn">☆ Save</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:14px 0;">
+        <button style="font-size:13px;padding:8px 20px;border:0.5px solid var(--color-border-tertiary);border-radius:20px;background:none;cursor:pointer;color:var(--color-text-secondary);">Load 9 more papers</button>
+      </div>
+    </main>
+
+    <aside class="pa-right">
+      <div class="pa-widget">
+        <div class="pa-widget-title">This Week</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+          <div class="pa-stat" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 6px;">
+            <div class="pa-stat-num">48</div>
+            <div class="pa-stat-label">Papers served</div>
+          </div>
+          <div class="pa-stat" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 6px;">
+            <div class="pa-stat-num">7</div>
+            <div class="pa-stat-label">Saved</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="pa-stat" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 6px;">
+            <div class="pa-stat-num">23</div>
+            <div class="pa-stat-label">Upvotes given</div>
+          </div>
+          <div class="pa-stat" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 6px;">
+            <div class="pa-stat-num">4</div>
+            <div class="pa-stat-label">Summaries</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pa-widget">
+        <div class="pa-widget-title">Similar Researchers</div>
+        <div class="pa-researcher">
+          <div class="pa-researcher-avatar" style="background:#E1F5EE;color:#085041;">LB</div>
+          <div>
+            <div class="pa-researcher-name">L. Barros</div>
+            <div class="pa-researcher-affil">MIT CSAIL</div>
+            <span class="pa-shared">RLHF · alignment</span>
+          </div>
+        </div>
+        <div class="pa-researcher">
+          <div class="pa-researcher-avatar" style="background:#EEEDFE;color:#3C3489;">KP</div>
+          <div>
+            <div class="pa-researcher-name">K. Patel</div>
+            <div class="pa-researcher-affil">Stanford NLP</div>
+            <span class="pa-shared">NLP · Transformers</span>
+          </div>
+        </div>
+        <div class="pa-researcher">
+          <div class="pa-researcher-avatar" style="background:#FAEEDA;color:#633806;">RY</div>
+          <div>
+            <div class="pa-researcher-name">R. Yamamoto</div>
+            <div class="pa-researcher-affil">DeepMind</div>
+            <span class="pa-shared">diffusion models</span>
+          </div>
+        </div>
+        <button style="width:100%;margin-top:10px;font-size:11px;padding:6px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:none;cursor:pointer;color:var(--color-text-secondary);">View all →</button>
+      </div>
+
+      <div class="pa-widget">
+        <div class="pa-widget-title">Quick Links</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <button style="text-align:left;padding:6px 4px;font-size:12px;color:var(--color-text-secondary);background:none;border:none;cursor:pointer;border-radius:var(--border-radius-md);">→ My Reading List (7)</button>
+          <button style="text-align:left;padding:6px 4px;font-size:12px;color:var(--color-text-secondary);background:none;border:none;cursor:pointer;border-radius:var(--border-radius-md);">→ Edit Profile</button>
+          <button style="text-align:left;padding:6px 4px;font-size:12px;color:var(--color-text-secondary);background:none;border:none;cursor:pointer;border-radius:var(--border-radius-md);">→ Past Digests</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>

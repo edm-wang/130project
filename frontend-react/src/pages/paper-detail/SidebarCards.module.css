@@ -1,0 +1,69 @@
+.catRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.catEdit {
+  font-size: 11px;
+  color: var(--color-brand);
+  background: none;
+  border: none;
+}
+
+.similar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.similar:last-child {
+  border-bottom: none;
+}
+.similarThumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  border: 0.5px solid var(--color-border-tertiary);
+  text-align: center;
+  line-height: 1.2;
+  white-space: pre-line;
+}
+.similarTitle {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  font-weight: 500;
+}
+.similarMeta {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.shareRow {
+  display: flex;
+  gap: 6px;
+}
+
+.shareBtn {
+  flex: 1;
+  padding: 7px;
+  font-size: 11px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  background: none;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.shareBtn:hover {
+  background: var(--color-background-secondary);
+}

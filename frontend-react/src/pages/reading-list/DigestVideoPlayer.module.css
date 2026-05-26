@@ -1,0 +1,111 @@
+.shell {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0c1520;
+}
+
+.screen {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+}
+
+.controls {
+  background: #09111a;
+  padding: 10px 16px 12px;
+}
+
+.progRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  position: relative;
+}
+
+.fill {
+  height: 100%;
+  background: var(--color-brand);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+
+.time {
+  font-family: 'DM Mono', var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 32px;
+}
+
+.ctrlRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.playBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.playBtn:hover {
+  background: var(--color-brand-soft);
+}
+
+.playIcon {
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 12px solid white;
+  margin-left: 2px;
+}
+
+.pauseIcon {
+  display: flex;
+  gap: 3px;
+}
+
+.pauseBar {
+  width: 3px;
+  height: 13px;
+  background: white;
+  border-radius: 1px;
+}
+
+.chLabel {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spd {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  background: none;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'DM Mono', var(--font-mono);
+}
+.spd.selected {
+  color: #9fe1cb;
+  border-color: rgba(29, 158, 117, 0.4);
+}
