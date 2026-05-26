@@ -1,0 +1,322 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&family=DM+Mono&display=swap');
+  * { box-sizing: border-box; }
+  .pr-root { font-family: 'DM Sans', var(--font-sans); background: var(--color-background-tertiary); min-height: 100vh; }
+  .pr-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 52px; background: var(--color-background-primary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .pr-logo { font-family: 'DM Serif Display', var(--font-serif); font-size: 20px; color: var(--color-text-primary); letter-spacing: -0.5px; }
+  .pr-logo span { color: #1D9E75; }
+  .pr-nav-links { display: flex; gap: 4px; }
+  .pr-nav-link { font-size: 13px; padding: 5px 10px; border-radius: var(--border-radius-md); color: var(--color-text-secondary); cursor: pointer; border: none; background: none; }
+  .pr-nav-link.active { background: var(--color-background-secondary); color: var(--color-text-primary); font-weight: 500; }
+  .pr-avatar-nav { width: 30px; height: 30px; border-radius: 50%; background: #9FE1CB; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #085041; }
+
+  .pr-breadcrumb { padding: 12px 28px; max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-tertiary); }
+  .pr-breadcrumb a { color: #1D9E75; cursor: pointer; border: none; background: none; font-size: 12px; padding: 0; }
+
+  .pr-body { display: grid; grid-template-columns: 1fr 320px; gap: 20px; padding: 0 28px 28px; max-width: 1100px; margin: 0 auto; }
+
+  .pr-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 20px 22px; margin-bottom: 16px; }
+  .pr-section-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-tertiary); margin-bottom: 12px; }
+
+  .pr-paper-source { font-family: 'DM Mono', var(--font-mono); font-size: 10px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .pr-paper-title { font-family: 'DM Serif Display', var(--font-serif); font-size: 20px; color: var(--color-text-primary); line-height: 1.35; margin-bottom: 8px; }
+  .pr-paper-authors { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
+  .pr-paper-affil { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 14px; }
+  .pr-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pr-meta-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); }
+  .pr-reason-box { background: #E1F5EE; border-radius: var(--border-radius-md); padding: 10px 13px; font-size: 12px; color: #0F6E56; line-height: 1.6; margin-bottom: 16px; }
+  .pr-reason-box strong { font-weight: 500; }
+  .pr-action-row { display: flex; align-items: center; gap: 8px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); flex-wrap: wrap; }
+  .pr-btn { display: flex; align-items: center; gap: 5px; padding: 6px 13px; font-size: 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; background: none; cursor: pointer; color: var(--color-text-secondary); }
+  .pr-btn:hover { background: var(--color-background-secondary); }
+  .pr-btn.up { }
+  .pr-btn.up.active { background: #E1F5EE; color: #0F6E56; border-color: #5DCAA5; }
+  .pr-btn.down.active { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
+  .pr-btn.save.active { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+  .pr-btn.arxiv { color: #185FA5; border-color: #85B7EB; }
+  .pr-vote-count { font-size: 11px; color: var(--color-text-tertiary); }
+
+  .pr-abstract { font-size: 13px; color: var(--color-text-secondary); line-height: 1.75; }
+  .pr-abstract p { margin: 0 0 10px; }
+  .pr-abstract p:last-child { margin: 0; }
+
+  .pr-tab-row { display: flex; gap: 0; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 16px; }
+  .pr-tab { padding: 8px 14px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -0.5px; }
+  .pr-tab.active { color: #1D9E75; border-bottom-color: #1D9E75; font-weight: 500; }
+
+  .pr-text-summary { font-size: 13px; color: var(--color-text-secondary); line-height: 1.8; }
+  .pr-text-summary p { margin: 0 0 12px; }
+  .pr-text-summary p:last-child { margin: 0; }
+  .pr-highlight { background: #E1F5EE; border-radius: 3px; padding: 1px 4px; color: #0F6E56; font-weight: 500; }
+  .pr-summary-section-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin: 14px 0 5px; }
+
+  .pr-video-shell { border-radius: var(--border-radius-lg); overflow: hidden; background: #0F1923; aspect-ratio: 16/9; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .pr-video-bg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  .pr-video-title-overlay { font-family: 'DM Serif Display', var(--font-serif); font-size: 15px; color: rgba(255,255,255,0.9); text-align: center; padding: 0 20px; line-height: 1.4; }
+  .pr-video-sub-overlay { font-size: 11px; color: rgba(255,255,255,0.45); font-family: 'DM Mono', var(--font-mono); letter-spacing: 0.05em; }
+  .pr-play-btn { width: 52px; height: 52px; border-radius: 50%; background: rgba(29,158,117,0.9); display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+  .pr-play-icon { width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 17px solid white; margin-left: 3px; }
+  .pr-progress-bar { width: 100%; padding: 0 14px 14px; position: absolute; bottom: 0; left: 0; }
+  .pr-progress-track { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; position: relative; }
+  .pr-progress-fill { height: 3px; width: 32%; background: #1D9E75; border-radius: 2px; }
+  .pr-video-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+  .pr-video-time { font-size: 10px; color: rgba(255,255,255,0.4); font-family: 'DM Mono', var(--font-mono); }
+  .pr-video-actions { display: flex; gap: 8px; }
+  .pr-video-ctrl-btn { font-size: 10px; color: rgba(255,255,255,0.4); background: none; border: none; cursor: pointer; padding: 0; }
+
+  .pr-chapters { display: flex; flex-direction: column; gap: 0; }
+  .pr-chapter { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+  .pr-chapter:last-child { border-bottom: none; }
+  .pr-chapter:hover .pr-chapter-title { color: #1D9E75; }
+  .pr-chapter-time { font-family: 'DM Mono', var(--font-mono); font-size: 10px; color: #1D9E75; padding-top: 2px; min-width: 34px; }
+  .pr-chapter-title { font-size: 12px; color: var(--color-text-secondary); line-height: 1.4; }
+  .pr-chapter.active .pr-chapter-title { color: var(--color-text-primary); font-weight: 500; }
+  .pr-chapter-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-border-secondary); margin-top: 5px; flex-shrink: 0; }
+  .pr-chapter.active .pr-chapter-dot { background: #1D9E75; }
+
+  .pr-gen-status { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border-radius: var(--border-radius-md); font-size: 12px; margin-bottom: 12px; }
+  .pr-gen-status.done { background: #E1F5EE; color: #0F6E56; }
+  .pr-gen-status.pending { background: #FAEEDA; color: #854F0B; }
+  .pr-gen-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .pr-gen-status.done .pr-gen-dot { background: #1D9E75; }
+  .pr-gen-status.pending .pr-gen-dot { background: #EF9F27; }
+
+  .pr-right-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px 18px; margin-bottom: 16px; }
+  .pr-right-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-tertiary); margin-bottom: 12px; }
+
+  .pr-cat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .pr-cat-badge { font-size: 11px; padding: 3px 9px; border-radius: 10px; background: #EEEDFE; color: #534AB7; }
+  .pr-cat-edit { font-size: 11px; color: #1D9E75; background: none; border: none; cursor: pointer; }
+
+  .pr-similar { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+  .pr-similar:last-child { border-bottom: none; }
+  .pr-similar-thumb { width: 36px; height: 36px; border-radius: var(--border-radius-md); background: var(--color-background-secondary); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--color-text-tertiary); flex-shrink: 0; border: 0.5px solid var(--color-border-tertiary); text-align: center; line-height: 1.2; }
+  .pr-similar-title { font-size: 12px; color: var(--color-text-primary); line-height: 1.3; font-weight: 500; }
+  .pr-similar-meta { font-size: 10px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+  .pr-share-row { display: flex; gap: 6px; }
+  .pr-share-btn { flex: 1; padding: 7px; font-size: 11px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: none; cursor: pointer; color: var(--color-text-secondary); text-align: center; }
+  .pr-share-btn:hover { background: var(--color-background-secondary); }
+</style>
+
+<div class="pr-root">
+  <h2 class="sr-only">Paper Aggregator — post-recommendation paper detail page with text and video summary</h2>
+
+  <nav class="pr-nav">
+    <div class="pr-logo">Paper<span>Agg</span></div>
+    <div class="pr-nav-links">
+      <button class="pr-nav-link active">Feed</button>
+      <button class="pr-nav-link">Reading List</button>
+      <button class="pr-nav-link">Discover</button>
+      <button class="pr-nav-link">Settings</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--color-text-secondary);">Alex Chen</span>
+      <div class="pr-avatar-nav">AC</div>
+    </div>
+  </nav>
+
+  <div class="pr-breadcrumb">
+    <button class="pr-btn" style="border:none;padding:0;" onclick="">← Back</button>
+    <span>/</span>
+    <a>Today's Feed</a>
+    <span>/</span>
+    <span style="color:var(--color-text-primary);">Paper detail</span>
+  </div>
+
+  <div class="pr-body">
+    <div>
+
+      <div class="pr-card">
+        <div class="pr-paper-source">arXiv · cs.LG · Apr 23, 2026</div>
+        <div class="pr-paper-title">Scaling Laws for Reward Model Generalization in RLHF Training</div>
+        <div class="pr-paper-authors">J. Patel, S. Nakamura, L. Rivera, M. Osei</div>
+        <div class="pr-paper-affil">Crestfield Institute of Technology · Bayside University</div>
+        <div class="pr-meta-row">
+          <span class="pr-meta-pill">cs.LG</span>
+          <span class="pr-meta-pill">cs.AI</span>
+          <span class="pr-meta-pill">8 pages</span>
+          <span class="pr-meta-pill">Apr 23, 2026</span>
+        </div>
+        <div class="pr-reason-box">
+          <strong>Why recommended:</strong> Matches your topic interest <span style="font-weight:500;">"RLHF"</span> and keyword <span style="font-weight:500;">"reward modeling"</span>. Score: 0.94 — top 3% of today's candidates.
+        </div>
+        <div class="pr-action-row">
+          <button class="pr-btn up active">▲ Upvote <span class="pr-vote-count">142</span></button>
+          <button class="pr-btn down">▼ Downvote <span class="pr-vote-count">8</span></button>
+          <button class="pr-btn save active">★ Saved</button>
+          <button class="pr-btn arxiv">↗ Open on arXiv</button>
+        </div>
+      </div>
+
+      <div class="pr-card">
+        <div class="pr-tab-row">
+          <button class="pr-tab active">✦ AI Text Summary</button>
+          <button class="pr-tab">▶ Video Summary</button>
+          <button class="pr-tab">Abstract</button>
+        </div>
+
+        <div class="pr-gen-status done">
+          <div class="pr-gen-dot"></div>
+          AI summary generated · Apr 23, 2026 at 6:02 AM
+        </div>
+
+        <div class="pr-text-summary">
+          <div class="pr-summary-section-title">What this paper is about</div>
+          <p>This paper investigates how <span class="pr-highlight">reward models</span> used in RLHF training behave as model size, dataset size, and compute budget scale up. The authors find consistent <span class="pr-highlight">power-law scaling relationships</span> — similar to those observed in base language model pretraining — governing reward model accuracy and generalization to held-out preference data.</p>
+
+          <div class="pr-summary-section-title">Key findings</div>
+          <p>Larger reward models generalize better across distribution shifts in human preference data, but exhibit diminishing returns past a critical parameter threshold. The paper identifies <span class="pr-highlight">reward model capacity</span> as a primary bottleneck in RLHF pipelines, suggesting that practitioners who scale the policy model without proportionally scaling the reward model may see degraded alignment outcomes. The authors propose a compute-optimal allocation formula balancing policy and reward model budgets.</p>
+
+          <div class="pr-summary-section-title">Why it matters</div>
+          <p>For researchers working on <span class="pr-highlight">alignment and RLHF</span>, this work provides actionable guidance on how to allocate training compute. It challenges the common practice of using a small reward model with a large policy model, and offers empirical evidence that reward model under-investment is a key cause of reward hacking at scale.</p>
+
+          <div class="pr-summary-section-title">Limitations</div>
+          <p>Experiments are limited to text-only preference data and a single reward model architecture family. The scaling laws may not transfer directly to multimodal or code-generation settings. The paper also does not evaluate downstream policy quality after full RLHF fine-tuning.</p>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:0.5px solid var(--color-border-tertiary);">
+          <button class="pr-btn" style="font-size:11px;">Regenerate summary</button>
+          <button class="pr-btn" style="font-size:11px;">Copy summary</button>
+        </div>
+      </div>
+
+      <div class="pr-card">
+        <div class="pr-section-label">▶ Video Summary</div>
+
+        <div class="pr-gen-status done" style="margin-bottom:14px;">
+          <div class="pr-gen-dot"></div>
+          Video generated · Apr 23, 2026 at 6:18 AM · 4 min 12 sec
+        </div>
+
+        <div class="pr-video-shell">
+          <div class="pr-video-bg">
+            <div style="width:64px;height:4px;background:rgba(29,158,117,0.6);border-radius:2px;margin-bottom:8px;"></div>
+            <div class="pr-video-title-overlay">Scaling Laws for Reward Model<br>Generalization in RLHF Training</div>
+            <div class="pr-video-sub-overlay">CRESTFIELD INSTITUTE · BAYSIDE UNIVERSITY</div>
+            <div style="height:16px;"></div>
+            <button class="pr-play-btn"><div class="pr-play-icon"></div></button>
+          </div>
+          <div class="pr-progress-bar">
+            <div class="pr-progress-track"><div class="pr-progress-fill"></div></div>
+            <div class="pr-video-controls">
+              <span class="pr-video-time">1:21 / 4:12</span>
+              <div class="pr-video-actions">
+                <button class="pr-video-ctrl-btn">0.5×</button>
+                <button class="pr-video-ctrl-btn">1×</button>
+                <button class="pr-video-ctrl-btn">1.5×</button>
+                <button class="pr-video-ctrl-btn">⛶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pr-section-label" style="margin-bottom:8px;">Chapters</div>
+        <div class="pr-chapters">
+          <div class="pr-chapter">
+            <div class="pr-chapter-dot"></div>
+            <div class="pr-chapter-time">0:00</div>
+            <div class="pr-chapter-title">Introduction — Why reward model scaling matters</div>
+          </div>
+          <div class="pr-chapter active">
+            <div class="pr-chapter-dot"></div>
+            <div class="pr-chapter-time">1:10</div>
+            <div class="pr-chapter-title">Experimental setup and scaling methodology</div>
+          </div>
+          <div class="pr-chapter">
+            <div class="pr-chapter-dot"></div>
+            <div class="pr-chapter-time">2:05</div>
+            <div class="pr-chapter-title">Power-law findings across model and data scale</div>
+          </div>
+          <div class="pr-chapter">
+            <div class="pr-chapter-dot"></div>
+            <div class="pr-chapter-time">3:10</div>
+            <div class="pr-chapter-title">Compute-optimal allocation formula</div>
+          </div>
+          <div class="pr-chapter">
+            <div class="pr-chapter-dot"></div>
+            <div class="pr-chapter-time">3:48</div>
+            <div class="pr-chapter-title">Limitations and future directions</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--color-border-tertiary);">
+          <button class="pr-btn" style="font-size:11px;">Re-generate video</button>
+          <button class="pr-btn" style="font-size:11px;">Download video</button>
+        </div>
+      </div>
+
+    </div>
+
+    <aside>
+
+      <div class="pr-right-card">
+        <div class="pr-right-title">Saved to reading list</div>
+        <div class="pr-cat-row">
+          <div>
+            <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:5px;">Auto-category</div>
+            <span class="pr-cat-badge">Alignment</span>
+            <span class="pr-cat-badge" style="margin-left:4px;">Scaling</span>
+          </div>
+          <button class="pr-cat-edit">Edit</button>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:8px;">Saved Apr 23 · Reading list · 7 papers</div>
+      </div>
+
+      <div class="pr-right-card">
+        <div class="pr-right-title">Your vote</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button class="pr-btn up active" style="flex:1;justify-content:center;">▲ Upvoted</button>
+          <button class="pr-btn down" style="flex:1;justify-content:center;">▼</button>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);">142 upvotes · 8 downvotes from all users</div>
+      </div>
+
+      <div class="pr-right-card">
+        <div class="pr-right-title">Generate video summary</div>
+        <div class="pr-gen-status done" style="margin-bottom:10px;font-size:11px;">
+          <div class="pr-gen-dot"></div>
+          Video ready
+        </div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);line-height:1.6;">A 4-minute narrated visual summary was auto-generated from the paper abstract and key sections.</div>
+        <button class="pr-btn" style="width:100%;justify-content:center;margin-top:10px;font-size:12px;">▶ Watch video</button>
+      </div>
+
+      <div class="pr-right-card">
+        <div class="pr-right-title">Share</div>
+        <div class="pr-share-row">
+          <button class="pr-share-btn">Copy link</button>
+          <button class="pr-share-btn">Email</button>
+          <button class="pr-share-btn">↗ arXiv</button>
+        </div>
+      </div>
+
+      <div class="pr-right-card">
+        <div class="pr-right-title">Related papers</div>
+        <div class="pr-similar">
+          <div class="pr-similar-thumb">cs<br>LG</div>
+          <div>
+            <div class="pr-similar-title">RLHF from Imperfect Human Feedback: A Robust Training Framework</div>
+            <div class="pr-similar-meta">Okonkwo et al. · Westlake Univ. · Apr 21</div>
+          </div>
+        </div>
+        <div class="pr-similar">
+          <div class="pr-similar-thumb">cs<br>AI</div>
+          <div>
+            <div class="pr-similar-title">Reward Model Ensembles for Preference Uncertainty Estimation</div>
+            <div class="pr-similar-meta">Hargrove et al. · Northgate Tech · Apr 19</div>
+          </div>
+        </div>
+        <div class="pr-similar">
+          <div class="pr-similar-thumb">cs<br>CL</div>
+          <div>
+            <div class="pr-similar-title">Constitutional Reward Shaping at Scale</div>
+            <div class="pr-similar-meta">Delacroix et al. · Crestfield Inst. · Apr 17</div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
