@@ -1,0 +1,44 @@
+.row {
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.row:last-child {
+  border-bottom: none;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 3px;
+  line-height: 1.4;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  display: block;
+}
+.title:hover {
+  color: var(--color-brand);
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 5px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.action {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px;
+  background: none;
+  color: var(--color-text-secondary);
+}

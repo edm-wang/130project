@@ -1,0 +1,112 @@
+.shell {
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  background: #0f1923;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.titleOverlay {
+  font-family: 'DM Serif Display', var(--font-serif);
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  padding: 0 20px;
+  line-height: 1.4;
+}
+
+.subOverlay {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'DM Mono', var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.bar {
+  width: 64px;
+  height: 4px;
+  background: rgba(29, 158, 117, 0.6);
+  border-radius: 2px;
+  margin-bottom: 8px;
+}
+
+.playBtn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(29, 158, 117, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.playIcon {
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 17px solid white;
+  margin-left: 3px;
+}
+
+.progressBar {
+  width: 100%;
+  padding: 0 14px 14px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  position: relative;
+}
+
+.fill {
+  height: 3px;
+  background: var(--color-brand);
+  border-radius: 2px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.time {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'DM Mono', var(--font-mono);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ctrlBtn {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  background: none;
+  border: none;
+  padding: 0;
+}

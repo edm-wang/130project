@@ -1,0 +1,38 @@
+/*
+ * Design tokens for the PaperAgg port.
+ *
+ * The source HTML mocks reference --color-* and --border-radius-* variables
+ * that aren't defined anywhere in the repo, so these values are starting
+ * points lifted from the visual design. Tweak during the verification pass.
+ */
+:root {
+  /* Backgrounds */
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f4f1;
+  --color-background-tertiary: #faf9f6;
+
+  /* Borders */
+  --color-border-primary: #d0cfca;
+  --color-border-secondary: #d7d6d1;
+  --color-border-tertiary: #e6e5e1;
+
+  /* Text */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #555555;
+  --color-text-tertiary: #999999;
+
+  /* Radii */
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+
+  /* Fonts (CSS rules already name DM families directly; these are fallbacks) */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Brand */
+  --color-brand: #1d9e75;
+  --color-brand-soft: #5dcaa5;
+  --color-brand-deep: #0f6e56;
+}
