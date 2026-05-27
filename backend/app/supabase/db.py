@@ -1,7 +1,7 @@
 
 import os
 from dotenv import load_dotenv
-from supabase import create_client
+from supabase import create_client, Client
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ db_pwd = os.environ['SUPABASE_PUBLISHABLE_KEY']
 service_client = None
 
 
-def get_or_create_service_supabase_client():
+def get_or_create_service_supabase_client() -> Client:
     global service_client
 
     if service_client is None:
