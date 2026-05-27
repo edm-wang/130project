@@ -1,9 +1,13 @@
 
 import os
 from dotenv import load_dotenv
-from supabase import create_client
+from supabase import create_client, Client
+from pathlib import Path
+
+SUPABASE_ENV_PATH = Path(__file__).resolve().parent / ".env"
 
 load_dotenv()
+load_dotenv(SUPABASE_ENV_PATH)
 
 # Don't modify these lines. Enable fast, reliable failures as .env must present under current directory
 assert 'SUPABASE_URL' in os.environ
@@ -15,7 +19,7 @@ db_pwd = os.environ['SUPABASE_PUBLISHABLE_KEY']
 service_client = None
 
 
-def get_or_create_service_supabase_client():
+def get_or_create_service_supabase_client() -> Client:
     global service_client
 
     if service_client is None:

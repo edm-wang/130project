@@ -8,12 +8,11 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 import json
 from pathlib import Path
 import sys
-from typing import Optional
-
+from typing import Optional, Any, Iterable
 from dotenv import load_dotenv
 
 from app.services.paper_ingestion import (
@@ -37,7 +36,8 @@ def load_supabase_env() -> None:
 
 def parse_date(value: Optional[str]) -> date:
     if value is None:
-        return datetime.now(timezone.utc).date()
+        #Defaults to yesterday in UTC timezone to avoid querying a future date, which returns 0 results regardless
+        return datetime.now(timezone.utc).date() - timedelta(days=1)
 
     try:
         return date.fromisoformat(value)
@@ -116,6 +116,122 @@ def paper_to_output_row(paper) -> dict:
         "source_updated_at": paper.source_updated_at,
     }
 
+#Begin human-written code
+def run_paper_ingestion_cron(
+        *,
+        target_date: date | None = None,
+        categories: Iterable[str] | None = None,
+        max_results: int = 1000,
+    ) -> dict[str, Any]:
+    from app.supabase.db import get_or_create_service_supabase_client
+
+    service_client = get_or_create_service_supabase_client()
+    
+    parsed_target_date = parse_date(target_date.isoformat() if target_date else None)
+    normalized_categories = list(sorted(DEFAULT_CATEGORIES) if not categories else sorted(categories))
+
+    existing_run = (
+        service_client
+        .table("paper_ingestion_runs")
+        .select("id, completed_at")
+        .eq("source", "arxiv")
+        .eq("target_date", parsed_target_date.isoformat())
+        .eq("status", "completed")
+        .eq("max_results", max_results)
+        .contains("categories", normalized_categories)
+        .contained_by("categories", normalized_categories)
+        .limit(1)
+        .execute()
+    )
+
+    if(existing_run.data):
+        _ = (
+            service_client
+            .table("paper_ingestion_runs")
+            .insert({
+                "source": "arxiv",
+                "target_date": parsed_target_date.isoformat(),
+                "status": "skipped",
+                "categories": normalized_categories,
+                "max_results": max_results,
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            })
+        ).execute()
+
+        return {
+            "skipped": True,
+            "run_id": None,
+            "status": "skipped",
+            "fetched_count": None,
+            "inserted_count": None
+        }
+
+
+    run_response = (
+        service_client
+        .table("paper_ingestion_runs")
+        .insert({
+            "source": "arxiv",
+            "target_date": parsed_target_date.isoformat(),
+            "status": "running",
+            "categories": normalized_categories,
+            "max_results": max_results,
+            "query_url": None,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .execute()
+    )
+    run = run_response.data[0]
+
+    try:
+        ingestion_result = ingest_arxiv_papers_for_date(
+            submitted_date=parsed_target_date,
+            categories=normalized_categories,
+            max_results=max_results,
+            client=service_client
+        )
+
+        _ = (
+            service_client
+            .table("paper_ingestion_runs")
+            .update({
+                "status": "completed",
+                "fetched_count": ingestion_result.fetched_count,
+                "inserted_count": ingestion_result.inserted_count,
+                "query_url": ingestion_result.query_url,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error_message": None
+            })
+            .eq("id", run["id"])
+            .execute()
+        )
+
+        return {
+            "skipped": False,
+            "run_id": run["id"],
+            "status": "completed",
+            "query_url": ingestion_result.query_url,
+            "fetched_count": ingestion_result.fetched_count,
+            "inserted_count": ingestion_result.inserted_count
+        }
+
+    except Exception as exception:
+        _ = (
+            service_client
+            .table("paper_ingestion_runs")
+            .update({
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error_message": str(exception)
+            })
+            .eq("id", run["id"])
+            .execute()
+        )
+
+        raise
+
+#End human-written code
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
