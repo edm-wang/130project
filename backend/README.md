@@ -22,4 +22,18 @@ auth.py defines get_user function that returns an user instance that could be us
 ## /tests
 create new files to contain unit/integration tests
 
+# Signing-in With Internal User
 
+`POST` to `{{SUPABASE_URL}}/auth/v1/token?grant_type=password` with body:
+```json
+{
+  "email": "email",
+  "password": "password"
+}
+```
+and header: 
+```
+apikey: {{SUPABASE_PUBLISHABLE_KEY}}
+Content-Type: application/json
+```
+Supabase should reply with access token.
