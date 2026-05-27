@@ -9,16 +9,14 @@ import Widget from '../../components/widgets/Widget.jsx';
 import FeedHeader from './FeedHeader.jsx';
 import FeedPaperCard from './FeedPaperCard.jsx';
 import useRecommendations from './useRecommendations.js';
-import {
-  quickLinks,
-  similarResearchers,
-  userInterests,
-  weekStats,
-} from './mockData.js';
+import { quickLinks, similarResearchers, weekStats } from './mockData.js';
+import useInterests from '../profile/useInterests.js';
+import { isMockMode } from '../../lib/api.js';
 import styles from './FeedPage.module.css';
 
 export default function FeedPage() {
   const { status, batch, recommendations, error } = useRecommendations();
+  const { interests } = useInterests();
 
   return (
     <div>
@@ -31,11 +29,17 @@ export default function FeedPage() {
         <aside className={styles.sidebar}>
           <Widget title="Research Interests">
             <div>
-              {userInterests.map((i) => (
-                <InterestTag key={i.id} kind={i.interest_type}>
-                  {i.value}
-                </InterestTag>
-              ))}
+              {interests.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                  No interests yet. Add some on your profile.
+                </div>
+              ) : (
+                interests.map((i) => (
+                  <InterestTag key={i.id} kind={i.interest_type}>
+                    {i.value}
+                  </InterestTag>
+                ))
+              )}
             </div>
             <button type="button" className={styles.addBtn}>
               + Add interest
@@ -100,9 +104,31 @@ export default function FeedPage() {
 
         {/* RIGHT SIDEBAR ---------------------------------------------------- */}
         <aside className={styles.right}>
-          <WeekStatsWidget stats={weekStats} />
-          <SimilarResearchersWidget researchers={similarResearchers} />
-          <QuickLinksWidget links={quickLinks} />
+          {isMockMode() ? (
+            <>
+              <WeekStatsWidget stats={weekStats} />
+              <SimilarResearchersWidget researchers={similarResearchers} />
+              <QuickLinksWidget links={quickLinks} />
+            </>
+          ) : (
+            <>
+              <Widget title="This Week">
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', padding: '4px 0' }}>
+                  Coming soon.
+                </div>
+              </Widget>
+              <Widget title="Similar Researchers">
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', padding: '4px 0' }}>
+                  Coming soon.
+                </div>
+              </Widget>
+              <Widget title="Quick Links">
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', padding: '4px 0' }}>
+                  Coming soon.
+                </div>
+              </Widget>
+            </>
+          )}
         </aside>
       </div>
     </div>
