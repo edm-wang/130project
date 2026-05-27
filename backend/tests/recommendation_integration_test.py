@@ -43,8 +43,7 @@ def load_supabase_env_from_temp_path():
 SUPABASE_ENV = load_supabase_env_from_temp_path()
 
 from app.main import app  # noqa: E402
-from app.routers import recommendation_batch  # noqa: E402
-from app.supabase.auth import get_user  # noqa: E402
+from app.supabase.auth import AuthContext, get_auth_context  # noqa: E402
 
 
 INTEGRATION_ALGORITHM_VERSION = "pytest_recommendation_integration"
@@ -145,7 +144,6 @@ def clear_dependency_overrides():
 
 
 def test_get_recommendations_returns_latest_completed_batch_with_joined_papers(
-    monkeypatch,
     supabase_client,
     test_user,
 ):
@@ -221,11 +219,10 @@ def test_get_recommendations_returns_latest_completed_batch_with_joined_papers(
         assert recommendation_response.data
         recommendation_id = recommendation_response.data[0]["id"]
 
-        app.dependency_overrides[get_user] = lambda: test_user
-        monkeypatch.setattr(
-            recommendation_batch,
-            "get_or_create_supabase_client",
-            lambda: supabase_client,
+        app.dependency_overrides[get_auth_context] = lambda: AuthContext(
+            user=test_user,
+            access_token="pytest-token",
+            client=supabase_client,
         )
 
         response = TestClient(app, raise_server_exceptions=False).get("/recommendations")

@@ -12,6 +12,21 @@ assert 'SUPABASE_PUBLISHABLE_KEY' in os.environ
 db_pwd = os.environ['SUPABASE_PUBLISHABLE_KEY']
 
 
-client = create_client(db_url, db_pwd)
-def get_or_create_supabase_client():
-    return client
+service_client = None
+
+
+def get_or_create_service_supabase_client():
+    global service_client
+
+    if service_client is None:
+        service_key = (
+            os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        )
+        if not service_key:
+            raise RuntimeError(
+                'SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required '
+                'for backend service database access'
+            )
+        service_client = create_client(db_url, service_key)
+
+    return service_client

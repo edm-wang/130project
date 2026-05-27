@@ -274,9 +274,9 @@ def upsert_papers(papers: Iterable[ArxivPaper], *, client=None) -> list[dict]:
         return []
 
     if client is None:
-        from app.supabase.db import get_or_create_supabase_client
+        from app.supabase.db import get_or_create_service_supabase_client
 
-        supabase_client = get_or_create_supabase_client()
+        supabase_client = get_or_create_service_supabase_client()
     else:
         supabase_client = client
     response = (
