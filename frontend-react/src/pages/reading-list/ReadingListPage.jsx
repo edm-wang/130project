@@ -1,22 +1,18 @@
+// [GenAI Usage] Prompt:
+// Rewire ReadingListPage to replace all mock data imports with the useSavedPapers hook.
+// Implement functional tab switching: Reading List tab shows real data with status messages,
+// Digest Video tab shows a "coming soon" placeholder. Derive filter chips and category counts
+// from the live savedPapers array. Replace the stats widget with "coming soon".
+// [GenAI Usage] Response Starts:
 import { useState } from 'react';
 
 import PageTabs from '../../components/chrome/PageTabs.jsx';
 import Badge from '../../components/atoms/Badge.jsx';
 import Widget from '../../components/widgets/Widget.jsx';
-import widgetStyles from '../../components/widgets/Widget.module.css';
 
-import DigestVideo from './DigestVideo.jsx';
 import ReadingListFilters from './ReadingListFilters.jsx';
 import ReadingListRow from './ReadingListRow.jsx';
-import {
-  TOTAL_SECONDS,
-  categoryCounts,
-  chapters,
-  filterChips,
-  readingList,
-  slides,
-  stats,
-} from './mockData.js';
+import useSavedPapers from './useSavedPapers.js';
 import styles from './ReadingListPage.module.css';
 
 const PAGE_TABS = [
@@ -28,13 +24,20 @@ export default function ReadingListPage() {
   const [pageTab, setPageTab] = useState('list');
   const [filter, setFilter] = useState('All');
 
-  // Pure-visual filter — "Unread" hides papers flagged read; named chips hide
-  // anything missing the category. Matches the static mock's behavior.
-  const filtered = readingList.filter((p) => {
+  const { status, savedPapers, filterChips, error } = useSavedPapers();
+
+  const filtered = savedPapers.filter((p) => {
     if (filter === 'All') return true;
     if (filter === 'Unread') return !p.read;
     return p.categories.includes(filter);
   });
+
+  // Derive category counts from live data for the sidebar widget.
+  const categoryCounts = Object.entries(
+    savedPapers
+      .flatMap((p) => p.categories)
+      .reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {}),
+  ).map(([label, count]) => ({ label, count }));
 
   return (
     <div>
@@ -46,129 +49,118 @@ export default function ReadingListPage() {
 
       <div className={styles.body}>
         <div>
-          {/* READING LIST CARD ------------------------------------------- */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitle}>
-                Reading List · {readingList.length} papers
+          {/* READING LIST TAB */}
+          {pageTab === 'list' && (
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardTitle}>
+                  Reading List · {savedPapers.length} papers
+                </div>
+                <button type="button" className={styles.cardAction}>
+                  Sort by date ↕
+                </button>
               </div>
-              <button type="button" className={styles.cardAction}>
-                Sort by date ↕
-              </button>
+
+              <ReadingListFilters
+                chips={filterChips}
+                active={filter}
+                onChange={setFilter}
+              />
+
+              {status === 'loading' && (
+                <div className={styles.status}>Loading reading list…</div>
+              )}
+              {status === 'no-token' && (
+                <div className={styles.status}>{error}</div>
+              )}
+              {status === 'network-error' && (
+                <div className={styles.status}>
+                  {error} Start it with{' '}
+                  <code>cd backend && uvicorn app.main:app --reload</code>.
+                </div>
+              )}
+              {status === 'unauthorized' && (
+                <div className={styles.status}>
+                  Your session expired. Try signing out and back in.
+                </div>
+              )}
+              {status === 'error' && (
+                <div className={styles.status}>Could not load reading list: {error}</div>
+              )}
+              {status === 'ready' && savedPapers.length === 0 && (
+                <div className={styles.status}>No saved papers yet.</div>
+              )}
+
+              {filtered.map((paper, i) => (
+                <ReadingListRow key={paper.id} paper={paper} index={i} />
+              ))}
             </div>
+          )}
 
-            <ReadingListFilters
-              chips={filterChips}
-              active={filter}
-              onChange={setFilter}
-            />
-
-            {filtered.map((paper, i) => (
-              <ReadingListRow key={paper.id} paper={paper} index={i} />
-            ))}
-          </div>
-
-          {/* DIGEST VIDEO CARD ------------------------------------------- */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitle}>▶ Today's Feed — Digest Video</div>
-              <button type="button" className={styles.cardAction}>
-                Download
-              </button>
+          {/* DIGEST VIDEO TAB — coming soon */}
+          {pageTab === 'digest' && (
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardTitle}>▶ Today's Feed — Digest Video</div>
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '12px 0' }}>
+                Digest video coming soon.
+              </div>
             </div>
-            <div className={styles.genDone}>
-              <div className={styles.genDot} />
-              Digest video generated · Apr 23, 2026 at 6:30 AM · 12 papers · 18 min 40 sec
-            </div>
-
-            <DigestVideo
-              chapters={chapters}
-              slides={slides}
-              totalSeconds={TOTAL_SECONDS}
-            />
-
-            <div className={styles.actionRow}>
-              <button type="button" className={styles.actionBtn}>
-                Re-generate digest
-              </button>
-              <button type="button" className={styles.actionBtn}>
-                Download video
-              </button>
-              <button type="button" className={styles.actionBtn}>
-                Email to me
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* RIGHT SIDEBAR ------------------------------------------------- */}
+        {/* RIGHT SIDEBAR */}
         <aside>
           <Widget title="Reading List Stats">
-            {stats.map((row) => (
-              <div key={row.label} className={widgetStyles.statRow}>
-                <span className={widgetStyles.statLabel}>{row.label}</span>
-                <span className={widgetStyles.statVal}>{row.value}</span>
-              </div>
-            ))}
+            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '8px 0' }}>
+              Stats coming soon.
+            </div>
           </Widget>
 
           <Widget title="Categories">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {categoryCounts.map((c) => (
-                <div
-                  key={c.label}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Badge variant="cat" style={{ fontSize: 12, padding: '3px 9px' }}>
-                    {c.label}
-                  </Badge>
-                  <span
-                    style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}
+            {categoryCounts.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                No categories yet.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {categoryCounts.map((c) => (
+                  <div
+                    key={c.label}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
                   >
-                    {c.count} paper{c.count === 1 ? '' : 's'}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    <Badge variant="cat" style={{ fontSize: 12, padding: '3px 9px' }}>
+                      {c.label}
+                    </Badge>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                      {c.count} paper{c.count === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Widget>
 
           <Widget title="Digest Video">
-            <div
-              className={styles.genDone}
-              style={{ fontSize: 11, marginBottom: 10 }}
-            >
-              <div className={styles.genDot} />
-              Generated today · 18 min 40 sec
+            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '8px 0' }}>
+              Coming soon.
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-                lineHeight: 1.7,
-                marginBottom: 10,
-              }}
-            >
-              Covers all 12 papers from today's feed with visual summaries, key stats,
-              and topic clusters.
-            </div>
-            <button
-              type="button"
-              className={styles.actionBtn}
-              style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
-            >
-              ▶ Watch digest
-            </button>
           </Widget>
         </aside>
       </div>
-
-      {/* Visual-only tab state; the digest video card always renders in this
-          port. Hook up routing/conditional rendering if you split them later. */}
-      {pageTab === '__unused__' ? null : null}
     </div>
   );
 }
+// [GenAI Usage] Response Ends
+// [GenAI Usage] Reflection:
+// I used Claude Code for this rewrite because it required removing a large block of digest video
+// JSX, wiring the useSavedPapers hook, and converting the always-rendered layout into a
+// tab-conditional one simultaneously. I verified the categoryCounts derivation uses reduce
+// correctly and handles papers with multiple categories, and confirmed that the filter logic
+// (filter === 'Unread' returns !p.read) is unchanged from the original mock implementation
+// so existing behaviour is preserved when switching to live data.

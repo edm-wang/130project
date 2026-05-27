@@ -7,7 +7,6 @@ import styles from './Navbar.module.css';
 const LINKS = [
   { to: '/feed', label: 'Feed' },
   { to: '/reading-list', label: 'Reading List' },
-  { to: '/profile', label: 'Profile' },
 ];
 
 function deriveInitials(email) {
@@ -55,7 +54,14 @@ export default function Navbar() {
         {status === 'signed-in' ? (
           <>
             <span className={styles.userName}>{displayName}</span>
-            <Avatar initials={initials} />
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              aria-label="Go to profile"
+            >
+              <Avatar initials={initials} />
+            </button>
             <button
               type="button"
               onClick={async () => {
