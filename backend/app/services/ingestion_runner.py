@@ -138,7 +138,8 @@ def run_paper_ingestion_cron(
         .eq("target_date", parsed_target_date.isoformat())
         .eq("status", "completed")
         .eq("max_results", max_results)
-        .eq("categories", normalized_categories)
+        .contains("categories", normalized_categories)
+        .contained_by("categories", normalized_categories)
         .limit(1)
         .execute()
     )
@@ -176,6 +177,7 @@ def run_paper_ingestion_cron(
             "status": "running",
             "categories": normalized_categories,
             "max_results": max_results,
+            "query_url": None,
             "started_at": datetime.now(timezone.utc).isoformat(),
         })
         .execute()
@@ -209,6 +211,7 @@ def run_paper_ingestion_cron(
             "skipped": False,
             "run_id": run["id"],
             "status": "completed",
+            "query_url": ingestion_result.query_url,
             "fetched_count": ingestion_result.fetched_count,
             "inserted_count": ingestion_result.inserted_count
         }
