@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 import json
 from pathlib import Path
 import sys
@@ -37,7 +37,8 @@ def load_supabase_env() -> None:
 
 def parse_date(value: Optional[str]) -> date:
     if value is None:
-        return datetime.now(timezone.utc).date()
+        #Defaults to yesterday in UTC timezone to avoid querying a future date, which returns 0 results regardless
+        return datetime.now(timezone.utc).date() - timedelta(days=1)
 
     try:
         return date.fromisoformat(value)
