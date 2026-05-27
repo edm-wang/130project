@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 import InterestTag from '../../components/atoms/InterestTag.jsx';
 import EmailDigestWidget from '../../components/widgets/EmailDigestWidget.jsx';
 import LegendWidget from '../../components/widgets/LegendWidget.jsx';
@@ -15,6 +17,7 @@ import { isMockMode } from '../../lib/api.js';
 import styles from './FeedPage.module.css';
 
 export default function FeedPage() {
+  const navigate = useNavigate();
   const { status, batch, recommendations, error } = useRecommendations();
   const { interests } = useInterests();
 
@@ -41,13 +44,25 @@ export default function FeedPage() {
                 ))
               )}
             </div>
-            <button type="button" className={styles.addBtn}>
+            <button
+              type="button"
+              className={styles.addBtn}
+              onClick={() => navigate('/profile?tab=interests')}
+            >
               + Add interest
             </button>
           </Widget>
 
           <LegendWidget />
-          <EmailDigestWidget />
+          {isMockMode() ? (
+            <EmailDigestWidget />
+          ) : (
+            <Widget title="Email Digest">
+              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', padding: '4px 0' }}>
+                Coming soon.
+              </div>
+            </Widget>
+          )}
         </aside>
 
         {/* FEED ------------------------------------------------------------- */}

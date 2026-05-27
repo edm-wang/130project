@@ -6,6 +6,7 @@
 // when useProfile returns no-profile status. Replace ActivityStats with a "coming soon" widget.
 // [GenAI Usage] Response Starts:
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import PageTabs from '../../components/chrome/PageTabs.jsx';
 import Widget from '../../components/widgets/Widget.jsx';
@@ -36,7 +37,8 @@ function computeInitials(displayName, email) {
 }
 
 export default function ProfilePage() {
-  const [tab, setTab] = useState('interests');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get('tab') || 'interests');
 
   const { status: profileStatus, profile, save: saveProfile } = useProfile();
   const { status: interestsStatus, interests, add: addInterest, remove: removeInterest } = useInterests();
