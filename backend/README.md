@@ -16,8 +16,8 @@ uvicorn app.main:app --reload --port 8000
 HTTP Endpoints are defined under /routers. To add a new group of api endpoints, please define your own routers there.  
 
 ## app/supabase
-db.py uses singleton to get a global supabase client instance 
-auth.py defines get_user function that returns an user instance that could be used by routers
+db.py defines a service-role Supabase client for trusted backend jobs
+auth.py defines get_auth_context function that returns the current user, access token, and authenticated Supabase client for routers
 
 ## /tests
 create new files to contain unit/integration tests
