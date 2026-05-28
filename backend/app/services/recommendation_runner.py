@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Any, Iterable, Optional, Tuple
 
 from supabase import Client
@@ -21,25 +24,44 @@ from app.services.recommendation import (
 # different types of embeddings) for the core recommendation algorithm.
 #[GenAI Usage] LLM response begins
 
-def generate_recommendations_for_user(client: Client, user) -> Tuple[dict, list[dict]]:
-    params_template = RecGenParams()
-    batch = _create_pending_batch(client, str(user.id), params_template)
+def generate_recommendations_for_user(
+    client: Client,
+    user,
+    params_template: Optional[RecGenParams] = None,
+) -> Tuple[dict, list[dict]]:
+    user_id = str(user.id)
+    params_template = params_template or RecGenParams()
+    active_interests = _fetch_active_interests(client, user_id)
+    saved_paper_rows = _fetch_saved_paper_rows(client, user_id)
+    feedback_rows = _fetch_feedback_rows(client, user_id)
+    user_snapshot_hash = generate_user_snapshot_hash(
+        user_id=user_id,
+        interests=active_interests,
+        saved_papers=saved_paper_rows,
+        feedback_rows=feedback_rows,
+    )
+    batch = _create_pending_batch(
+        client,
+        user_id,
+        params_template,
+        user_snapshot_hash=user_snapshot_hash,
+    )
 
     try:
-        active_interests = _fetch_active_interests(client, str(user.id))
         interest_embeddings = _embed_interests(active_interests, params_template)
         candidate_papers = _retrieve_candidate_papers(
             client,
             interest_embeddings,
             params_template,
         )
-        saved_papers = _fetch_saved_paper_signals(client, str(user.id))
-        upvoted_papers, downvoted_papers = _fetch_feedback_paper_signals(
+        saved_papers = _hydrate_user_paper_signals(client, saved_paper_rows)
+        upvoted_papers, downvoted_papers = _feedback_rows_to_paper_signals(
             client,
-            str(user.id),
+            feedback_rows,
         )
 
-        params = RecGenParams(
+        params = replace(
+            params_template,
             interests=interest_embeddings,
             candidate_papers=candidate_papers,
             saved_papers=saved_papers,
@@ -70,6 +92,8 @@ def _create_pending_batch(
     client: Client,
     user_id: str,
     params: RecGenParams,
+    *,
+    user_snapshot_hash: str,
 ) -> dict:
     response = (
         client.table("recommendation_batches")
@@ -79,6 +103,7 @@ def _create_pending_batch(
                 "status": "pending",
                 "algorithm_version": params.algorithm_version,
                 "parameters": params.to_batch_parameters(),
+                "user_snapshot_hash": user_snapshot_hash,
             }
         )
         .execute()
@@ -138,7 +163,7 @@ def _fail_batch(client: Client, batch_id: str, exc: Exception) -> None:
 def _fetch_active_interests(client: Client, user_id: str) -> list[dict]:
     response = (
         client.table("research_interests")
-        .select("id, interest_type, value, preference_weight")
+        .select("id, interest_type, value, normalized_value, preference_weight")
         .eq("user_id", user_id)
         .eq("is_active", True)
         .order("created_at")
@@ -146,6 +171,59 @@ def _fetch_active_interests(client: Client, user_id: str) -> list[dict]:
     )
     return response.data or []
 
+def _stable_hash(value: Any) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+def generate_recommentation_parameter_hash(params: RecGenParams | dict) -> str:
+    parameters = params.to_batch_parameters() if isinstance(params, RecGenParams) else params
+    stable_parameters = {
+        key: value
+        for key, value in parameters.items()
+        if key != "input_counts"
+    }
+    return _stable_hash(stable_parameters)
+
+def generate_user_snapshot_hash(
+    *,
+    user_id: str,
+    interests: list[dict],
+    saved_papers: list[dict],
+    feedback_rows: list[dict],
+) -> str:
+    snapshot = {
+        "user_id": user_id,
+        "interests": sorted(
+            [
+                {
+                    "interest_type": row.get("interest_type"),
+                    "normalized_value": row.get("normalized_value")
+                    or str(row.get("value", "")).strip().lower(),
+                    "preference_weight": str(row.get("preference_weight", "1.0")),
+                }
+                for row in interests
+            ],
+            key=lambda row: (
+                row["interest_type"] or "",
+                row["normalized_value"] or "",
+                row["preference_weight"] or "",
+            ),
+        ),
+        "saved_paper_ids": sorted(
+            str(row["paper_id"]) for row in saved_papers if row.get("paper_id")
+        ),
+        "upvoted_paper_ids": sorted(
+            str(row["paper_id"])
+            for row in feedback_rows
+            if row.get("paper_id") and row.get("feedback_value") == 1
+        ),
+        "downvoted_paper_ids": sorted(
+            str(row["paper_id"])
+            for row in feedback_rows
+            if row.get("paper_id") and row.get("feedback_value") == -1
+        ),
+    }
+    return _stable_hash(snapshot)
 
 def _embed_interests(
     interests: list[dict],
@@ -269,27 +347,43 @@ def _candidate_from_row(
 
 
 def _fetch_saved_paper_signals(client: Client, user_id: str) -> list[UserPaperSignal]:
+    return _hydrate_user_paper_signals(client, _fetch_saved_paper_rows(client, user_id))
+
+
+def _fetch_saved_paper_rows(client: Client, user_id: str) -> list[dict]:
     response = (
         client.table("saved_papers")
         .select("paper_id, created_at, updated_at")
         .eq("user_id", user_id)
         .execute()
     )
-    return _hydrate_user_paper_signals(client, response.data or [])
+    return response.data or []
 
 
 def _fetch_feedback_paper_signals(
     client: Client,
     user_id: str,
 ) -> tuple[list[UserPaperSignal], list[UserPaperSignal]]:
+    return _feedback_rows_to_paper_signals(
+        client,
+        _fetch_feedback_rows(client, user_id),
+    )
+
+
+def _fetch_feedback_rows(client: Client, user_id: str) -> list[dict]:
     response = (
         client.table("recommendation_feedback")
         .select("paper_id, feedback_value, created_at, updated_at")
         .eq("user_id", user_id)
         .execute()
     )
+    return response.data or []
 
-    feedback_rows = response.data or []
+
+def _feedback_rows_to_paper_signals(
+    client: Client,
+    feedback_rows: list[dict],
+) -> tuple[list[UserPaperSignal], list[UserPaperSignal]]:
     upvoted_rows = [row for row in feedback_rows if row.get("feedback_value") == 1]
     downvoted_rows = [row for row in feedback_rows if row.get("feedback_value") == -1]
 

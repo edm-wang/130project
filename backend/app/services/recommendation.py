@@ -75,7 +75,7 @@ class RecGenParams:
     saved_paper_weight: float = 0.25
     upvote_weight: float = 0.35
     downvote_weight: float = 0.35
-    freshness_weight: float = 0.15
+    freshness_weight: float = 0.1
     downvote_penalty_cap: float = 0.35
     downvote_similarity_threshold: float = 0.65
     saved_decay: DecayConfig = field(

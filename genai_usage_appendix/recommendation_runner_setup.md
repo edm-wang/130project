@@ -542,3 +542,23 @@ python -m py_compile backend\app\services\recommendation.py backend\app\services
 ```
 
 No live Supabase/OpenAI calls were run.
+
+### User 21
+Can you create a user snapshot has generaor either in recommendation_batch.py  or recommendation_runner.py to generate a deterministic hash of the user (e.g. using user's id, deterministic formating of the interest, saved papers, upvoted papers, downvoted papers. And then in recommendation_runner.py , create and persist the user snapshot hash when we create a pending recommendation batch. No need to modify the endpoint handling in recommendation_batch.py  now - I will be implementing the logic later.
+
+### Assistant 21
+Implemented the snapshot hash generation in recommendation_runner.py (line 169).
+What changed:
+Added generate_user_snapshot_hash(...), which deterministically hashes:user_id
+active interests as interest_type, normalized value, preference weight
+saved paper IDs
+upvoted paper IDs
+downvoted paper IDs
+
+Uses sorted JSON + SHA-256, so row ordering does not affect the hash.
+generate_recommendations_for_user now fetches the raw user snapshot first, computes the hash, and persists it when creating the pending batch.
+_create_pending_batch now inserts user_snapshot_hash.
+I did not modify endpoint handling logic.
+Verification:
+py_compile passes.
+Added a small determinism smoke check showing reordered interests/saved/feedback rows produce the same hash.
