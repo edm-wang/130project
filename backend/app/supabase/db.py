@@ -1,9 +1,13 @@
 
 import os
 from dotenv import load_dotenv
-from supabase import create_client
+from supabase import create_client, Client
+from pathlib import Path
+
+SUPABASE_ENV_PATH = Path(__file__).resolve().parent / ".env"
 
 load_dotenv()
+load_dotenv(SUPABASE_ENV_PATH)
 
 # Don't modify these lines. Enable fast, reliable failures as .env must present under current directory
 assert 'SUPABASE_URL' in os.environ
@@ -12,6 +16,21 @@ assert 'SUPABASE_PUBLISHABLE_KEY' in os.environ
 db_pwd = os.environ['SUPABASE_PUBLISHABLE_KEY']
 
 
-client = create_client(db_url, db_pwd)
-def get_or_create_supabase_client():
-    return client
+service_client = None
+
+
+def get_or_create_service_supabase_client() -> Client:
+    global service_client
+
+    if service_client is None:
+        service_key = (
+            os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        )
+        if not service_key:
+            raise RuntimeError(
+                'SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required '
+                'for backend service database access'
+            )
+        service_client = create_client(db_url, service_key)
+
+    return service_client

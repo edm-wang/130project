@@ -1,0 +1,41 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin: 3px 2px;
+  border: none;
+}
+
+.field {
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+.topic {
+  background: #e6f1fb;
+  color: #185fa5;
+}
+.author {
+  background: #faeeda;
+  color: #854f0b;
+}
+.keyword {
+  background: #eeedfe;
+  color: #534ab7;
+}
+
+.remove {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.5;
+  margin-left: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+.remove:hover {
+  opacity: 1;
+}

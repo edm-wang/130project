@@ -1,0 +1,126 @@
+.wrap {
+  display: flex;
+  justify-content: center;
+  padding: 60px 28px;
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 22px 24px;
+}
+
+.title {
+  font-family: 'DM Serif Display', var(--font-serif);
+  font-size: 22px;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  margin-bottom: 18px;
+}
+
+.tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+}
+.tab.active {
+  color: var(--color-brand);
+  border-bottom-color: var(--color-brand);
+  font-weight: 500;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.input {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.submit {
+  width: 100%;
+  padding: 9px;
+  font-size: 13px;
+  background: var(--color-brand);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-weight: 500;
+  margin-top: 6px;
+}
+.submit:disabled {
+  opacity: 0.5;
+}
+
+.error {
+  background: #fcebeb;
+  border-radius: var(--border-radius-md);
+  padding: 8px 11px;
+  font-size: 12px;
+  color: #a32d2d;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.notice {
+  background: #faeeda;
+  border-radius: var(--border-radius-md);
+  padding: 8px 11px;
+  font-size: 12px;
+  color: #854f0b;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.success {
+  background: #e1f5ee;
+  border-radius: var(--border-radius-md);
+  padding: 8px 11px;
+  font-size: 12px;
+  color: #0f6e56;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.unconfigured {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-top: 14px;
+}

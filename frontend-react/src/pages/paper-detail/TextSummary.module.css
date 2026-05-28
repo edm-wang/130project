@@ -1,0 +1,55 @@
+.summary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+.summary p {
+  margin: 0 0 12px;
+}
+.summary p:last-child {
+  margin: 0;
+}
+
+.highlight {
+  background: #e1f5ee;
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #0f6e56;
+  font-weight: 500;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin: 14px 0 5px;
+}
+
+.genStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  margin-bottom: 12px;
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+.genDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.footerRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}

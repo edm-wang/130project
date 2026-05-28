@@ -1,3 +1,6 @@
+-- [GenAI Use]: Please see genai_usage_appendix\initial_dataset_setup.md for the specific 
+-- conversation that led to the creation of the below code.
+-- [GenAI Use]: Selected LLM generated code start
 set search_path = public, extensions;
 
 create extension if not exists pgcrypto with schema extensions;
@@ -251,3 +254,10 @@ using hnsw (embedding vector_cosine_ops);
 create index idx_interest_embeddings_vector
 on public.research_interest_embeddings
 using hnsw (embedding vector_cosine_ops);
+
+--[GenAI Use]: Selected LLM generated code end
+--[GenAI Use] Reflection: I thoroughly explored various approaches of implementing our database 
+-- (e.g. using native PostgresSQL, or library on top of PostgresSQL, or Supabase) and theier potential drawbacks.
+-- then, I clearly specified the various components in our system (e.g. User, Paper, RecommendationBatch) and the
+-- required information within each component. Codex offers efficient automation of the repetitive declaration
+-- of schema and attributes within each schema. 

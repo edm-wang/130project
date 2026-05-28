@@ -1,0 +1,32 @@
+.toggle {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  position: relative;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+}
+
+.on {
+  background: var(--color-brand);
+}
+.on::after {
+  right: 2px;
+}
+
+.off {
+  background: var(--color-border-secondary);
+}
+.off::after {
+  left: 2px;
+}

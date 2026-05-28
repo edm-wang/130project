@@ -1,0 +1,15 @@
+.section {
+  margin-bottom: 14px;
+}
+.label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

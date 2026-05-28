@@ -1,0 +1,67 @@
+.row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.row:last-child {
+  border-bottom: none;
+}
+
+.num {
+  font-family: 'DM Mono', var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  min-width: 18px;
+  padding-top: 2px;
+}
+
+.content {
+  flex: 1;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  margin-bottom: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  display: block;
+}
+.title:hover {
+  color: var(--color-brand);
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 6px;
+}
+
+.badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.action {
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px;
+  background: none;
+  color: var(--color-text-secondary);
+}
+.action:hover {
+  background: var(--color-background-secondary);
+}

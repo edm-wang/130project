@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
-from app.supabase.auth import get_user
-from app.supabase.db import get_or_create_supabase_client
+from app.supabase.auth import AuthContext, get_auth_context
 
 rec_router = APIRouter(prefix='/recommendations')
 
 
 @rec_router.get('')
-def get_recommendation_batch(user=Depends(get_user)):
-    client = get_or_create_supabase_client()
+def get_recommendation_batch(auth: AuthContext = Depends(get_auth_context)):
+    user = auth.user
+    client = auth.client
 
     res = client.table('recommendation_batches').select('*').eq('user_id', user.id).eq("status", 'completed').order('created_at', desc=True).limit(1).execute()
     if not res.data:

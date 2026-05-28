@@ -1,0 +1,42 @@
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+.md {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+.lg {
+  width: 72px;
+  height: 72px;
+  font-size: 26px;
+  font-family: 'DM Serif Display', var(--font-serif);
+}
+
+.green {
+  background: #9fe1cb;
+  color: #085041;
+}
+.mint {
+  background: #e1f5ee;
+  color: #085041;
+}
+.lilac {
+  background: #eeedfe;
+  color: #3c3489;
+}
+.peach {
+  background: #faeeda;
+  color: #633806;
+}
