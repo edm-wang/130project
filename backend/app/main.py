@@ -14,6 +14,7 @@ app.add_middleware(
 )
 
 app.include_router(recommendation_batch.rec_router)
+app.include_router(paper_summaries.summary_router)
 app.include_router(paper_ingestion.ingestion_router)
 app.include_router(users.users_router)
 app.include_router(saved_papers.saved_papers_router)
