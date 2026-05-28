@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends,Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.llm_summary import (
     MissingPaperContentError,
@@ -7,24 +7,27 @@ from app.services.llm_summary import (
     SummaryProviderError,
     generate_summary_text,
 )
-from app.supabase.auth import get_user
-from app.supabase.db import get_or_create_supabase_client
+from app.supabase.auth import AuthContext, get_auth_context
 
 summary_router = APIRouter(prefix="/papers",tags=["paper summaries"])
 
 @summary_router.get('/{paper_id}/summary')
-def get_paper_summary(paper_id: UUID, user=Depends(get_user)):
-    client = get_or_create_supabase_client()
+def get_paper_summary(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    client = auth.client
     summary = _get_existing_summary(client, str(paper_id))
     if not summary:
         raise HTTPException(status_code=404, detail="Summary not found")
     return {"summary":summary}
 
 @summary_router.post('/{paper_id}/summary')
-def generate_paper_summary(paper_id: UUID, user=Depends(get_user), authorization:str | None = Header(default=None)):
-    client=get_or_create_supabase_client()
-    token = authorization[7:].strip()
-    client.postgrest.auth(token)
+def generate_paper_summary(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    client = auth.client
     paper_id_str = str(paper_id)
     # existing = _get_existing_summary(client, paper_id_str)
     # if existing: 
@@ -32,8 +35,11 @@ def generate_paper_summary(paper_id: UUID, user=Depends(get_user), authorization
     return _generate_and_store_summary(client, paper_id_str)
 
 @summary_router.post("/{paper_id}/summary/regenerate")
-def regenerate_paper_summary(paper_id: UUID, user=Depends(get_user)):
-    client = get_or_create_supabase_client()
+def regenerate_paper_summary(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    client = auth.client
     return _generate_and_store_summary(client, str(paper_id))
 
 def _generate_and_store_summary(client, paper_id:str):
