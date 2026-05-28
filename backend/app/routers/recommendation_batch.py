@@ -1,54 +1,29 @@
-from datetime import datetime, timezone, timedelta
 from typing import Optional, Tuple
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from supabase import Client
 
 from app.supabase.auth import AuthContext, get_auth_context
 
 rec_router = APIRouter(prefix='/recommendations')
-RECOMMENDATION_COOLDOWN_SECONDS = 30
 
-
-def is_within_recommendation_cooldown(created_at: str) -> bool:
-    creation_time = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    now_time = datetime.now(timezone.utc)
-    return creation_time >= now_time - timedelta(
-        seconds=RECOMMENDATION_COOLDOWN_SECONDS
-    )
-
-
-def get_completed_recommendation_batch(client: Client, user) -> Tuple[Optional[dict], Optional[list[dict]]]:
-    """
-    Return a tuple of the completed recommendation batch (if any), and the recommendation items (if any)
-    """
-    completed_run = (
+def get_pending_recommendation_batch(client: Client, user) -> Tuple[bool, Optional[dict]]:
+    pending_run = (
         client
         .table("recommendation_batches")
         .select("*")
         .eq("user_id", user.id)
-        .eq("status", "completed")
+        .eq("status", "pending")
         .order("created_at", desc=True)
         .limit(1)
         .execute()
     )
 
-    if(completed_run.data):
-        batch = completed_run.data[0]
+    if(pending_run.data):
+        batch = pending_run.data[0]
+        return True, batch
 
-        if(is_within_recommendation_cooldown(batch["created_at"])):
-            recommendation_items = (
-                client
-                .table("recommendations")
-                .select("*, paper:papers(*)")
-                .eq("batch_id", batch["id"])
-                .order("rank_position", desc=False)
-                .execute()
-            ).data
-
-            return batch, recommendation_items if recommendation_items else []
-        
-    return None, None
+    return False, None
 
 
 def _limit_recommendations(
@@ -62,25 +37,27 @@ def _limit_recommendations(
 
 @rec_router.get('')
 def get_recommendation_batch(
+    response: Response,
     max_papers: Optional[int] = Query(default=None, ge=0),
     auth: AuthContext = Depends(get_auth_context),
 ):
     user = auth.user
     client = auth.client
 
-    completed_batch, completed_recommendations = get_completed_recommendation_batch(client, user)
-    if(completed_batch is not None):
+    has_pending_recommendation_batch, pending_recommendation_batch = get_pending_recommendation_batch(client, user)
+    if(has_pending_recommendation_batch):
+        response.status_code = 202
         return {
-            "batch": completed_batch,
-            "recommendations": _limit_recommendations(
-                completed_recommendations,
-                max_papers,
-            )
+            "status": "pending",
+            "batch": pending_recommendation_batch,
+            "recommendations": [],
         }
 
     from app.services.recommendation_runner import generate_recommendations_for_user 
     batch, recommendations = generate_recommendations_for_user(client, user)
+    response.status_code = 201
     return {
+        "status": batch.get("status", "completed"),
         "batch": batch,
         "recommendations": _limit_recommendations(recommendations, max_papers)
     }
