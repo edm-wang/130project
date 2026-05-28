@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 from math import sqrt
 from typing import Any, Literal, Optional
 
+from app.services.embedding_config import (
+    DEFAULT_EMBEDDING_DIMENSIONS,
+    DEFAULT_EMBEDDING_MODEL,
+)
+
 DecayType = Literal["half_life", "reciprocal"]
 
 @dataclass
@@ -63,8 +68,8 @@ class UserPaperSignal:
 @dataclass
 class RecGenParams:
     algorithm_version: str = "multi_vector_v1"
-    embedding_model: str = "text-embedding-3-small"
-    embedding_dimensions: int = 1536
+    embedding_model: str = DEFAULT_EMBEDDING_MODEL
+    embedding_dimensions: int = DEFAULT_EMBEDDING_DIMENSIONS
     retrieval_top_n: int = 200
     keep_top_n_per_interest: int = 125
     interest_score_mix_eta: float = 0.2
@@ -75,7 +80,7 @@ class RecGenParams:
     saved_paper_weight: float = 0.25
     upvote_weight: float = 0.35
     downvote_weight: float = 0.35
-    freshness_weight: float = 0.15
+    freshness_weight: float = 0.1
     downvote_penalty_cap: float = 0.35
     downvote_similarity_threshold: float = 0.65
     saved_decay: DecayConfig = field(

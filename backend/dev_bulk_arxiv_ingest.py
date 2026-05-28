@@ -10,11 +10,13 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from app.services.embedding_config import (
+    DEFAULT_EMBEDDING_DIMENSIONS,
+    DEFAULT_EMBEDDING_MODEL,
+)
 from app.services.paper_ingestion import (
     ARXIV_API_URL,
     DEFAULT_CATEGORIES,
-    DEFAULT_EMBEDDING_DIMENSIONS,
-    DEFAULT_EMBEDDING_MODEL,
     DEFAULT_REQUEST_DELAY_SECONDS,
     DEFAULT_TIMEOUT_SECONDS,
     ArxivPaper,

@@ -36,6 +36,11 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 
+from app.services.embedding_config import (
+    DEFAULT_EMBEDDING_DIMENSIONS,
+    DEFAULT_EMBEDDING_MODEL,
+)
+
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
 OPENSEARCH_NS = "{http://a9.com/-/spec/opensearch/1.1/}"
@@ -48,8 +53,6 @@ DEFAULT_SORT_ORDER = "descending"
 DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_RETRIES = 1
 DEFAULT_REQUEST_DELAY_SECONDS = 3
-DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
-DEFAULT_EMBEDDING_DIMENSIONS = 1536
 DEFAULT_EMBEDDING_BATCH_SIZE = 128
 ARXIV_LAST_REQUEST_PATH = Path(tempfile.gettempdir()) / "paper_arxiv_last_request.txt"
 service_openai_client = None
