@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import recommendation_batch
+from app.routers import recommendation_batch, paper_summaries
 
 app = FastAPI(title="PaperArxiv Services")
 
@@ -14,3 +14,4 @@ app.add_middleware(
 )
 
 app.include_router(recommendation_batch.rec_router)
+app.include_router(paper_summaries.summary_router)
