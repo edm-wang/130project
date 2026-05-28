@@ -164,7 +164,8 @@ def run_paper_ingestion_cron(
             "run_id": None,
             "status": "skipped",
             "fetched_count": None,
-            "inserted_count": None
+            "inserted_count": None,
+            "embedded_count": None,
         }
 
 
@@ -213,7 +214,8 @@ def run_paper_ingestion_cron(
             "status": "completed",
             "query_url": ingestion_result.query_url,
             "fetched_count": ingestion_result.fetched_count,
-            "inserted_count": ingestion_result.inserted_count
+            "inserted_count": ingestion_result.inserted_count,
+            "embedded_count": ingestion_result.embedded_count,
         }
 
     except Exception as exception:
@@ -269,6 +271,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "query_url": result.query_url,
                 "fetched_count": result.fetched_count,
                 "inserted_count": result.inserted_count,
+                "embedded_count": result.embedded_count,
                 "papers": result.papers,
                 "embeddings_skipped": result.embeddings_skipped,
             }
