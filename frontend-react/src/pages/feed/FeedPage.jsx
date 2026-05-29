@@ -13,12 +13,16 @@ import FeedPaperCard from './FeedPaperCard.jsx';
 import useRecommendations from './useRecommendations.js';
 import { quickLinks, similarResearchers, weekStats } from './mockData.js';
 import useInterests from '../profile/useInterests.js';
+import useProfile from '../profile/useProfile.js';
 import { isMockMode } from '../../lib/api.js';
 import styles from './FeedPage.module.css';
 
 export default function FeedPage() {
   const navigate = useNavigate();
-  const { status, batch, recommendations, error } = useRecommendations();
+  const { status: profileStatus } = useProfile();
+  const { status, batch, recommendations, error } = useRecommendations({
+    enabled: profileStatus !== 'loading' && profileStatus !== 'no-profile',
+  });
   const { interests } = useInterests();
 
   return (
@@ -68,6 +72,19 @@ export default function FeedPage() {
         {/* FEED ------------------------------------------------------------- */}
         <main className={styles.feed}>
           <FeedHeader batch={batch} count={recommendations.length} />
+
+          {profileStatus === 'no-profile' ? (
+            <div className={styles.status}>
+              Complete your profile to get personalized recommendations.{' '}
+              <button
+                type="button"
+                className={styles.addBtn}
+                onClick={() => navigate('/profile?tab=edit')}
+              >
+                Set up profile →
+              </button>
+            </div>
+          ) : null}
 
           {status === 'loading' ? (
             <div className={styles.status}>Loading recommendations…</div>
