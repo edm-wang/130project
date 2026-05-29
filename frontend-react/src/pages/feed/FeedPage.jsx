@@ -99,8 +99,20 @@ export default function FeedPage() {
 
           {status === 'ready' && recommendations.length === 0 ? (
             <div className={styles.status}>
-              No recommendations yet — generate a completed batch on the
-              backend and reload.
+              {interests.length === 0 ? (
+                <>
+                  Add research interests to your profile to get personalized recommendations.{' '}
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    onClick={() => navigate('/profile?tab=interests')}
+                  >
+                    Add interests →
+                  </button>
+                </>
+              ) : (
+                'No recommendations yet — reload to generate your first batch.'
+              )}
             </div>
           ) : null}
 
