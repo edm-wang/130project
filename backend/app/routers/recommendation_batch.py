@@ -24,9 +24,6 @@ DEFAULT_MIN_REC_GEN_RETRIEVAL_TOP_N = 100
 DEFAULT_MAX_REC_GEN_RETRIEVAL_TOP_N = 200
 
 
-class RecommendationFeedbackRequest(BaseModel):
-    feedback: Optional[Literal["upvote", "downvote"]] = None
-    feedback_value: Optional[Literal[-1, 1]] = None
 
 
 def _limit_recommendations(
@@ -159,6 +156,10 @@ def get_recommendation_batch(
 #  can you add a @rec_router.post("/feedback/{paper_id}") endpoint to give the feedback of the paper? the user can upvote or downvote
 #  once per paper. The code shall be added here: backend/app/routers/recommendation_batch.py
 # [GenAI Usage] LLM reseponse begins:
+
+class RecommendationFeedbackRequest(BaseModel):
+    feedback: Optional[Literal["upvote", "downvote"]] = None
+    feedback_value: Optional[Literal[-1, 1]] = None
 
 @rec_router.post("/feedback/{paper_id}")
 def upsert_recommendation_feedback(
