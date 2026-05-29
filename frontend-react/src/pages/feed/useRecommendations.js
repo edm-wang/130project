@@ -18,7 +18,7 @@ import { mockResponse } from './mockData.js';
  *   error: string,
  * }}
  */
-export default function useRecommendations() {
+export default function useRecommendations({ enabled = true } = {}) {
   const auth = useAuth();
   const accessToken = auth.session ? auth.session.access_token : '';
 
@@ -31,6 +31,11 @@ export default function useRecommendations() {
 
   useEffect(() => {
     let cancelled = false;
+
+    if (!enabled) {
+      setState({ status: 'idle', batch: null, recommendations: [], error: '' });
+      return undefined;
+    }
 
     if (isMockMode()) {
       setState({
@@ -101,7 +106,7 @@ export default function useRecommendations() {
     // Re-run when the auth status flips or the access token changes (e.g.
     // refresh). Including the token covers token-refresh edges without
     // forcing the page to remount.
-  }, [auth.status, accessToken]);
+  }, [auth.status, accessToken, enabled]);
 
   return state;
 }

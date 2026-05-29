@@ -15,6 +15,7 @@ import EditProfileForm from './EditProfileForm.jsx';
 import InterestSection from './InterestSection.jsx';
 import ProfileHero from './ProfileHero.jsx';
 import SavedPaperRow from './SavedPaperRow.jsx';
+import useAuth from '../../hooks/useAuth.js';
 import useInterests from './useInterests.js';
 import useProfile from './useProfile.js';
 import useSavedPapers from '../reading-list/useSavedPapers.js';
@@ -40,6 +41,7 @@ export default function ProfilePage() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get('tab') || 'interests');
 
+  const auth = useAuth();
   const { status: profileStatus, profile, save: saveProfile } = useProfile();
   const { status: interestsStatus, interests, add: addInterest, remove: removeInterest } = useInterests();
   const { savedPapers } = useSavedPapers();
@@ -70,7 +72,7 @@ export default function ProfilePage() {
     displayName: profile?.display_name || '',
     affiliation: profile?.institution || '',
     bio: profile?.bio || '',
-    email: profile?.email || '',
+    email: profile?.email || auth.session?.user?.email || '',
   };
 
   return (

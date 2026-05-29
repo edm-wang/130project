@@ -26,6 +26,14 @@
   resize: none;
 }
 
+.inputReadOnly {
+  background: var(--color-surface-raised);
+  color: var(--color-text-tertiary);
+  border-color: transparent;
+  cursor: default;
+  user-select: text;
+}
+
 .urlStatus {
   font-size: 10px;
   margin-top: 2px;

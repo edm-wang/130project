@@ -62,12 +62,11 @@ export default function EditProfileForm({ initial, onSave }) {
         />
       </div>
       <div className={styles.row}>
-        <div className={styles.label}>Email</div>
+        <div className={styles.label}>Email <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(login)</span></div>
         <input
-          className={styles.input}
+          className={[styles.input, styles.inputReadOnly].join(' ')}
           value={form.email}
           readOnly
-          disabled
         />
       </div>
       <button

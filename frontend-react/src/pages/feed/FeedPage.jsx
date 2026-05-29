@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import InterestTag from '../../components/atoms/InterestTag.jsx';
@@ -13,13 +14,29 @@ import FeedPaperCard from './FeedPaperCard.jsx';
 import useRecommendations from './useRecommendations.js';
 import { quickLinks, similarResearchers, weekStats } from './mockData.js';
 import useInterests from '../profile/useInterests.js';
+import useProfile from '../profile/useProfile.js';
 import { isMockMode } from '../../lib/api.js';
 import styles from './FeedPage.module.css';
 
 export default function FeedPage() {
   const navigate = useNavigate();
-  const { status, batch, recommendations, error } = useRecommendations();
+  const { status: profileStatus } = useProfile();
+  const { status, batch, recommendations, error } = useRecommendations({
+    enabled: profileStatus !== 'loading' && profileStatus !== 'no-profile',
+  });
   const { interests } = useInterests();
+
+  // [GenAI Usage] Prompt: add client-side pagination to the feed — show PAGE_SIZE papers at a time,
+  // wire the existing "Load more" button to reveal the next page, and reset when a new batch loads.
+  // [GenAI Usage] Response begins:
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset pagination when a new batch loads.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [batch?.id]);
+  // [GenAI Usage] Response ends
 
   return (
     <div>
@@ -69,6 +86,19 @@ export default function FeedPage() {
         <main className={styles.feed}>
           <FeedHeader batch={batch} count={recommendations.length} />
 
+          {profileStatus === 'no-profile' ? (
+            <div className={styles.status}>
+              Complete your profile to get personalized recommendations.{' '}
+              <button
+                type="button"
+                className={styles.addBtn}
+                onClick={() => navigate('/profile?tab=edit')}
+              >
+                Set up profile →
+              </button>
+            </div>
+          ) : null}
+
           {status === 'loading' ? (
             <div className={styles.status}>Loading recommendations…</div>
           ) : null}
@@ -99,22 +129,44 @@ export default function FeedPage() {
 
           {status === 'ready' && recommendations.length === 0 ? (
             <div className={styles.status}>
-              No recommendations yet — generate a completed batch on the
-              backend and reload.
+              {interests.length === 0 ? (
+                <>
+                  Add research interests to your profile to get personalized recommendations.{' '}
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    onClick={() => navigate('/profile?tab=interests')}
+                  >
+                    Add interests →
+                  </button>
+                </>
+              ) : (
+                'No recommendations yet — reload to generate your first batch.'
+              )}
             </div>
           ) : null}
 
-          {recommendations.map((rec, idx) => (
+          {/* [GenAI Usage] Response begins (pagination render) */}
+          {recommendations.slice(0, visibleCount).map((rec, idx) => (
             <FeedPaperCard key={rec.id} rec={rec} unread={idx < 2} />
           ))}
 
-          {status === 'ready' && recommendations.length > 0 ? (
+          {status === 'ready' && visibleCount < recommendations.length ? (
             <div className={styles.loadMore}>
-              <button type="button" className={styles.loadMoreBtn}>
+              <button
+                type="button"
+                className={styles.loadMoreBtn}
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              >
                 Load more papers
               </button>
             </div>
           ) : null}
+          {/* [GenAI Usage] Response ends */}
+          {/* [GenAI Reflection] The pagination logic is straightforward — visibleCount slices the
+              already-loaded recommendations array, and the useEffect reset on batch?.id ensures the
+              page resets when fresh recommendations arrive. I verified the button hides correctly
+              when all papers are visible. */}
         </main>
 
         {/* RIGHT SIDEBAR ---------------------------------------------------- */}
