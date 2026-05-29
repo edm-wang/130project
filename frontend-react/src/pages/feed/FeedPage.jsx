@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import InterestTag from '../../components/atoms/InterestTag.jsx';
@@ -24,6 +25,18 @@ export default function FeedPage() {
     enabled: profileStatus !== 'loading' && profileStatus !== 'no-profile',
   });
   const { interests } = useInterests();
+
+  // [GenAI Usage] Prompt: add client-side pagination to the feed — show PAGE_SIZE papers at a time,
+  // wire the existing "Load more" button to reveal the next page, and reset when a new batch loads.
+  // [GenAI Usage] Response begins:
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset pagination when a new batch loads.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [batch?.id]);
+  // [GenAI Usage] Response ends
 
   return (
     <div>
@@ -133,17 +146,27 @@ export default function FeedPage() {
             </div>
           ) : null}
 
-          {recommendations.map((rec, idx) => (
+          {/* [GenAI Usage] Response begins (pagination render) */}
+          {recommendations.slice(0, visibleCount).map((rec, idx) => (
             <FeedPaperCard key={rec.id} rec={rec} unread={idx < 2} />
           ))}
 
-          {status === 'ready' && recommendations.length > 0 ? (
+          {status === 'ready' && visibleCount < recommendations.length ? (
             <div className={styles.loadMore}>
-              <button type="button" className={styles.loadMoreBtn}>
+              <button
+                type="button"
+                className={styles.loadMoreBtn}
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              >
                 Load more papers
               </button>
             </div>
           ) : null}
+          {/* [GenAI Usage] Response ends */}
+          {/* [GenAI Reflection] The pagination logic is straightforward — visibleCount slices the
+              already-loaded recommendations array, and the useEffect reset on batch?.id ensures the
+              page resets when fresh recommendations arrive. I verified the button hides correctly
+              when all papers are visible. */}
         </main>
 
         {/* RIGHT SIDEBAR ---------------------------------------------------- */}
