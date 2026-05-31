@@ -171,3 +171,19 @@ export async function fetchSavedPapers() {
 // stay short and consistent. I reviewed the error code mapping (NO_TOKEN, NETWORK, UNAUTHORIZED,
 // NOT_FOUND, CONFLICT, HTTP_ERROR) against the existing fetchRecommendations implementation and
 // confirmed the Content-Type header is included on POST/PUT requests that send a JSON body.
+
+/** POST /saved-papers. Returns { saved_paper: {...} }. */
+export async function savePaper(paperId) {
+  const res = await apiFetch('/saved-papers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paper_id: paperId }),
+  });
+  return res.json();
+}
+
+/** DELETE /saved-papers/:paperId. Returns { deleted: paperId }. */
+export async function unsavePaper(paperId) {
+  const res = await apiFetch(`/saved-papers/${paperId}`, { method: 'DELETE' });
+  return res.json();
+}
