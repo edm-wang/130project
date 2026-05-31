@@ -8,7 +8,7 @@
 // widget, removing all mock-specific sidebar cards.
 // [GenAI Usage] Response begins:
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import Widget from '../../components/widgets/Widget.jsx';
 import { fetchPaper, fetchPaperSummary, generatePaperSummary } from '../../lib/api.js';
@@ -23,7 +23,8 @@ import styles from './PaperDetailPage.module.css';
 export default function PaperDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('abstract');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get('tab') || 'abstract');
 
   const [paper, setPaper] = useState(null);
   const [paperStatus, setPaperStatus] = useState('loading');
@@ -183,7 +184,7 @@ export default function PaperDetailPage() {
           </div>
 
           <aside>
-            <ShareCard />
+            <ShareCard paper={paper} />
             <Widget title="Related papers">
               <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
                 Coming soon.

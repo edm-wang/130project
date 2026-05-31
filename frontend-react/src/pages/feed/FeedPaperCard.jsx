@@ -89,7 +89,7 @@ export default function FeedPaperCard({ rec, unread }) {
             before the await resolves. Switching directly from upvote to downvote (or vice versa)
             calls POST rather than DELETE, since the backend upserts on conflict, so no intermediate
             removal step is needed. */}
-        <PillButton variant="summary">✦ Summarize</PillButton>
+        <PillButton variant="summary" onClick={() => navigate(`/papers/${rec.paper_id}?tab=text`)}>✦ Summarize</PillButton>
         <PillButton variant="ghost" href={link}>
           ↗ {linkLabel}
         </PillButton>

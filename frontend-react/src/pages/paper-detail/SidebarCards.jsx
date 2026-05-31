@@ -122,19 +122,39 @@ export function VideoSidebarCard({ video }) {
   );
 }
 
-export function ShareCard() {
+export function ShareCard({ paper }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  const emailHref = paper
+    ? `mailto:?subject=${encodeURIComponent(paper.title)}&body=${encodeURIComponent(window.location.href)}`
+    : 'mailto:';
+
   return (
     <Widget title="Share">
       <div className={styles.shareRow}>
-        <button type="button" className={styles.shareBtn}>
-          Copy link
+        <button type="button" className={styles.shareBtn} onClick={handleCopy}>
+          {copied ? 'Copied!' : 'Copy link'}
         </button>
-        <button type="button" className={styles.shareBtn}>
+        <a className={styles.shareBtn} href={emailHref}>
           Email
-        </button>
-        <button type="button" className={styles.shareBtn}>
-          ↗ arXiv
-        </button>
+        </a>
+        {paper?.source_url && (
+          <a
+            className={styles.shareBtn}
+            href={paper.source_url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            ↗ arXiv
+          </a>
+        )}
       </div>
     </Widget>
   );
