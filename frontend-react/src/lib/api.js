@@ -171,3 +171,59 @@ export async function fetchSavedPapers() {
 // stay short and consistent. I reviewed the error code mapping (NO_TOKEN, NETWORK, UNAUTHORIZED,
 // NOT_FOUND, CONFLICT, HTTP_ERROR) against the existing fetchRecommendations implementation and
 // confirmed the Content-Type header is included on POST/PUT requests that send a JSON body.
+
+/** POST /saved-papers. Returns { saved_paper: {...} }. */
+export async function savePaper(paperId) {
+  const res = await apiFetch('/saved-papers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paper_id: paperId }),
+  });
+  return res.json();
+}
+
+/** DELETE /saved-papers/:paperId. Returns { deleted: paperId }. */
+export async function unsavePaper(paperId) {
+  const res = await apiFetch(`/saved-papers/${paperId}`, { method: 'DELETE' });
+  return res.json();
+}
+
+/** GET /papers/:id. Returns { paper: {...} }. */
+export async function fetchPaper(paperId) {
+  const res = await apiFetch(`/papers/${paperId}`);
+  return res.json();
+}
+
+/** GET /papers/:id/summary. Returns { summary: {...} }. Throws NOT_FOUND if none exists. */
+export async function fetchPaperSummary(paperId) {
+  const res = await apiFetch(`/papers/${paperId}/summary`);
+  return res.json();
+}
+
+/** POST /papers/:id/summary. Generates and returns { summary: {...} }. */
+export async function generatePaperSummary(paperId) {
+  const res = await apiFetch(`/papers/${paperId}/summary`, { method: 'POST' });
+  return res.json();
+}
+
+/** GET /recommendations/feedback. Returns { feedback: [{ paper_id, feedback_value }] }. */
+export async function fetchFeedback() {
+  const res = await apiFetch('/recommendations/feedback');
+  return res.json();
+}
+
+/** POST /recommendations/feedback/:paperId. feedback_value: 1 (upvote) or -1 (downvote). */
+export async function postFeedback(paperId, feedbackValue) {
+  const res = await apiFetch(`/recommendations/feedback/${paperId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feedback_value: feedbackValue }),
+  });
+  return res.json();
+}
+
+/** DELETE /recommendations/feedback/:paperId. Removes the vote entirely. */
+export async function deleteFeedback(paperId) {
+  const res = await apiFetch(`/recommendations/feedback/${paperId}`, { method: 'DELETE' });
+  return res.json();
+}

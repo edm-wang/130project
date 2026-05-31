@@ -15,6 +15,8 @@ import useRecommendations from './useRecommendations.js';
 import { quickLinks, similarResearchers, weekStats } from './mockData.js';
 import useInterests from '../profile/useInterests.js';
 import useProfile from '../profile/useProfile.js';
+import useSavedPapers from '../reading-list/useSavedPapers.js';
+import useFeedback from './useFeedback.js';
 import { isMockMode } from '../../lib/api.js';
 import styles from './FeedPage.module.css';
 
@@ -25,6 +27,9 @@ export default function FeedPage() {
     enabled: profileStatus !== 'loading' && profileStatus !== 'no-profile',
   });
   const { interests } = useInterests();
+  const { savedPapers } = useSavedPapers();
+  const savedPaperIds = new Set(savedPapers.map((p) => p.id));
+  const { voteByPaperId } = useFeedback();
 
   // [GenAI Usage] Prompt: add client-side pagination to the feed — show PAGE_SIZE papers at a time,
   // wire the existing "Load more" button to reveal the next page, and reset when a new batch loads.
@@ -148,7 +153,15 @@ export default function FeedPage() {
 
           {/* [GenAI Usage] Response begins (pagination render) */}
           {recommendations.slice(0, visibleCount).map((rec, idx) => (
-            <FeedPaperCard key={rec.id} rec={rec} unread={idx < 2} />
+            <FeedPaperCard
+              key={rec.id}
+              rec={{
+                ...rec,
+                user_saved: savedPaperIds.has(rec.paper_id),
+                user_vote: voteByPaperId.get(rec.paper_id) ?? 0,
+              }}
+              unread={idx < 2}
+            />
           ))}
 
           {status === 'ready' && visibleCount < recommendations.length ? (
