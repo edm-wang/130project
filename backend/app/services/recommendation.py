@@ -72,31 +72,31 @@ class RecGenParams:
     embedding_dimensions: int = DEFAULT_EMBEDDING_DIMENSIONS
     retrieval_top_n: int = 200
     keep_top_n_per_interest: int = 125
-    interest_score_mix_eta: float = 0.2
+    interest_score_mix_eta: float = 0.15
     saved_top_k: int = 5
-    upvote_top_k: int = 5
-    downvote_top_k: int = 3
+    upvote_top_k: int = 10
+    downvote_top_k: int = 10
     interest_weight: float = 1.0
-    saved_paper_weight: float = 0.25
-    upvote_weight: float = 0.35
-    downvote_weight: float = 0.35
+    saved_paper_weight: float = 0.2
+    upvote_weight: float = 0.4
+    downvote_weight: float = 0.4
     freshness_weight: float = 0.1
-    downvote_penalty_cap: float = 0.35
+    downvote_penalty_cap: float = 1.0
     downvote_similarity_threshold: float = 0.65
     saved_decay: DecayConfig = field(
-        default_factory=lambda: DecayConfig(half_life_days=90.0)
+        default_factory=lambda: DecayConfig(half_life_days=10.0)
     )
     upvote_decay: DecayConfig = field(
-        default_factory=lambda: DecayConfig(half_life_days=60.0)
+        default_factory=lambda: DecayConfig(half_life_days=10.0)
     )
     downvote_decay: DecayConfig = field(
-        default_factory=lambda: DecayConfig(half_life_days=30.0)
+        default_factory=lambda: DecayConfig(half_life_days=10.0)
     )
     freshness_decay: DecayConfig = field(
         default_factory=lambda: DecayConfig(
             decay_type="half_life",
-            half_life_days=7.0,
-            plateau=DecayModificationConfig(parameter=2.0, enabled=True),
+            half_life_days=30.0,
+            plateau=DecayModificationConfig(parameter=14.0, enabled=True),
         )
     )
     enable_diversity_filtering: bool = False

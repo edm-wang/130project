@@ -1,3 +1,10 @@
+#[GenAI Usage] Prompt: Please write a script that allows bulk ingestion of papers. The program should be executed manually as an initial ingestion of paper.GeneratorExit
+# Instead of specifying a target date, as implemented in the daily paper ingestion runner. Please instead allow specifying a start and end date range; in addition, the
+# user should be able to specify the list of categories, max paper to ingest. Then, the program should reuse appropriate components, formulate the query URL, and query
+# arxiv to fetch the papers (with appropriate timeout and retry mechianism), and then compute the embeddings of the paper, and then insert the papers and their respective
+# embeddings into the database. 
+#[GenAI Usage] LLM response begins:
+
 from __future__ import annotations
 
 import argparse
@@ -5,7 +12,7 @@ from datetime import date, datetime, time, timezone
 import json
 import sys
 import time as time_module
-from typing import Optional
+from typing import Iterable, Optional, TypeVar
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -22,7 +29,6 @@ from app.services.paper_ingestion import (
     ArxivPaper,
     embed_arxiv_papers,
     parse_arxiv_feed,
-    upsert_paper_embeddings,
     upsert_papers,
     _format_arxiv_date,
     _normalize_categories,
@@ -31,6 +37,8 @@ from app.services.paper_ingestion import (
 
 MAX_ARXIV_PAGE_SIZE = 2000
 DEFAULT_RATE_LIMIT_BACKOFF_SECONDS = 300
+DEFAULT_DB_BATCH_SIZE = 50
+T = TypeVar("T")
 
 
 def parse_date(value: str) -> date:
@@ -42,9 +50,21 @@ def parse_date(value: str) -> date:
 """
 python dev_bulk_arxiv_ingest.py `
 --start-date 2025-01-01 `
+--end-date 2025-05-31 `
+--category cs.AI cs.LG cs.CL cs.CV stat.ML cs.RO cs.MA cs.NE cs.IR `
+--max-results 500 `
+
+python dev_bulk_arxiv_ingest.py `
+--start-date 2025-06-01 `
 --end-date 2025-12-31 `
 --category cs.AI cs.LG cs.CL cs.CV stat.ML cs.RO cs.MA cs.NE cs.IR `
 --max-results 500 `
+
+python dev_bulk_arxiv_ingest.py `
+--start-date 2025-01-01 `
+--end-date 2025-12-31 `
+--category cs.AI `
+--max-results 1000 `
 
 python dev_bulk_arxiv_ingest.py `
   --start-date 2026-01-01 `
@@ -67,8 +87,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument("--max-results", type=int, default=1000)
     parser.add_argument("--page-size", type=int, default=2000)
-    parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--retries", type=int, default=3)
+    parser.add_argument(
+        "--db-batch-size",
+        type=int,
+        default=DEFAULT_DB_BATCH_SIZE,
+        help="Rows per Supabase upsert statement.",
+    )
     parser.add_argument(
         "--request-delay",
         type=int,
@@ -107,6 +133,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         parser.error("--timeout must be at least 1")
     if args.rate_limit_backoff < 0:
         parser.error("--rate-limit-backoff must not be negative")
+    if args.db_batch_size < 1:
+        parser.error("--db-batch-size must be at least 1")
 
     args.categories = parse_categories(args.category)
     return args
@@ -257,6 +285,114 @@ def paper_to_sample_row(paper: ArxivPaper) -> dict:
     }
 
 
+def _iter_batches(
+    items: list[T],
+    batch_size: int,
+) -> Iterable[tuple[int, int, list[T]]]:
+    total_batches = (len(items) + batch_size - 1) // batch_size
+    for start in range(0, len(items), batch_size):
+        yield (
+            (start // batch_size) + 1,
+            total_batches,
+            items[start:start + batch_size],
+        )
+
+
+def upsert_papers_in_batches(
+    papers: list[ArxivPaper],
+    *,
+    client,
+    batch_size: int,
+) -> list[dict]:
+    inserted_papers: list[dict] = []
+    for batch_number, total_batches, batch in _iter_batches(papers, batch_size):
+        print(
+            "Upserting papers batch "
+            f"{batch_number}/{total_batches} ({len(batch)} row(s))...",
+            file=sys.stderr,
+        )
+        try:
+            inserted_papers.extend(upsert_papers(batch, client=client))
+        except Exception as exc:
+            raise RuntimeError(
+                "paper upsert batch "
+                f"{batch_number}/{total_batches} failed ({len(batch)} row(s)): {exc}"
+            ) from exc
+
+    return inserted_papers
+
+
+def _paper_embedding_rows(
+    papers: list[ArxivPaper],
+    persisted_papers: list[dict],
+) -> list[dict]:
+    persisted_by_source_id = {
+        paper.get("source_id"): paper
+        for paper in persisted_papers
+        if paper.get("source_id") and paper.get("id")
+    }
+    rows = []
+    for paper in papers:
+        persisted_paper = persisted_by_source_id.get(paper.source_id)
+        if (
+            persisted_paper
+            and paper.embedding is not None
+            and paper.embedded_text is not None
+            and paper.embedding_model is not None
+        ):
+            rows.append(
+                {
+                    "paper_id": persisted_paper["id"],
+                    "embedding_model": paper.embedding_model,
+                    "embedding": paper.embedding,
+                    "embedded_text": paper.embedded_text,
+                }
+            )
+
+    return rows
+
+
+def upsert_paper_embeddings_in_batches(
+    papers: list[ArxivPaper],
+    persisted_papers: list[dict],
+    *,
+    client,
+    batch_size: int,
+) -> int:
+    rows = _paper_embedding_rows(papers, persisted_papers)
+    if not rows:
+        return 0
+
+    from postgrest.types import ReturnMethod
+
+    embedded_count = 0
+    for batch_number, total_batches, batch in _iter_batches(rows, batch_size):
+        print(
+            "Upserting paper embeddings batch "
+            f"{batch_number}/{total_batches} ({len(batch)} row(s))...",
+            file=sys.stderr,
+        )
+        try:
+            (
+                client.table("paper_embeddings")
+                .upsert(
+                    batch,
+                    on_conflict="paper_id",
+                    returning=ReturnMethod.minimal,
+                )
+                .execute()
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "paper embedding upsert batch "
+                f"{batch_number}/{total_batches} failed ({len(batch)} row(s)): {exc}"
+            ) from exc
+
+        embedded_count += len(batch)
+
+    return embedded_count
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
 
@@ -274,24 +410,31 @@ def main(argv: Optional[list[str]] = None) -> int:
         )
 
         inserted_papers = []
-        inserted_embeddings = []
+        embedded_count = 0
         if not args.fetch_only:
             from app.supabase.db import get_or_create_service_supabase_client
 
             client = get_or_create_service_supabase_client()
             if not args.skip_embeddings:
+                print(f"Embedding {len(papers)} paper(s)...", file=sys.stderr)
                 papers = embed_arxiv_papers(
                     papers,
                     embedding_model=DEFAULT_EMBEDDING_MODEL,
                     embedding_dimensions=DEFAULT_EMBEDDING_DIMENSIONS,
                 )
 
-            inserted_papers = upsert_papers(papers, client=client)
-            inserted_embeddings = upsert_paper_embeddings(
+            inserted_papers = upsert_papers_in_batches(
                 papers,
-                inserted_papers,
                 client=client,
+                batch_size=args.db_batch_size,
             )
+            if not args.skip_embeddings:
+                embedded_count = upsert_paper_embeddings_in_batches(
+                    papers,
+                    inserted_papers,
+                    client=client,
+                    batch_size=args.db_batch_size,
+                )
 
         output = {
             "date_range": {
@@ -302,7 +445,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             "sort_by": "relevance",
             "fetched_count": len(papers),
             "inserted_count": len(inserted_papers),
-            "embedded_count": len(inserted_embeddings),
+            "embedded_count": embedded_count,
             "embeddings_skipped": args.fetch_only or args.skip_embeddings,
             "query_count": len(query_urls),
             "query_urls": query_urls,
@@ -318,3 +461,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+#[GenAI Usage] LLM response ends
+#[GenAI Usage] Reflection: I used Codex for this task with a high level instruction because this is not an integral part of the product.
+# The purpose of the initial ingestion is to mainly accumulate a large number of papers to our database (isntead of ingesting through 
+# scheduled cron jobs in our actual application) so we can thoroughly test our recommendation algorithm. Nonetheless, I clearly specified
+# the arguments that the user can provide to the program, the intended effect; I also thoroughly examined the code to ensure it achieves
+# the desired behavior.
