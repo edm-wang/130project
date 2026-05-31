@@ -188,6 +188,24 @@ export async function unsavePaper(paperId) {
   return res.json();
 }
 
+/** GET /papers/:id. Returns { paper: {...} }. */
+export async function fetchPaper(paperId) {
+  const res = await apiFetch(`/papers/${paperId}`);
+  return res.json();
+}
+
+/** GET /papers/:id/summary. Returns { summary: {...} }. Throws NOT_FOUND if none exists. */
+export async function fetchPaperSummary(paperId) {
+  const res = await apiFetch(`/papers/${paperId}/summary`);
+  return res.json();
+}
+
+/** POST /papers/:id/summary. Generates and returns { summary: {...} }. */
+export async function generatePaperSummary(paperId) {
+  const res = await apiFetch(`/papers/${paperId}/summary`, { method: 'POST' });
+  return res.json();
+}
+
 /** GET /recommendations/feedback. Returns { feedback: [{ paper_id, feedback_value }] }. */
 export async function fetchFeedback() {
   const res = await apiFetch('/recommendations/feedback');

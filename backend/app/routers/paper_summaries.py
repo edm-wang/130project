@@ -11,6 +11,22 @@ from app.supabase.auth import AuthContext, get_auth_context
 
 summary_router = APIRouter(prefix="/papers",tags=["paper summaries"])
 
+@summary_router.get('/{paper_id}')
+def get_paper_detail(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    client = auth.client
+    res = (
+        client.table("papers")
+        .select("*")
+        .eq("id", str(paper_id))
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    return {"paper": res.data[0]}
+
 @summary_router.get('/{paper_id}/summary')
 def get_paper_summary(
     paper_id: UUID,
