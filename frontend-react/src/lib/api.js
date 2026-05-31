@@ -187,3 +187,25 @@ export async function unsavePaper(paperId) {
   const res = await apiFetch(`/saved-papers/${paperId}`, { method: 'DELETE' });
   return res.json();
 }
+
+/** GET /recommendations/feedback. Returns { feedback: [{ paper_id, feedback_value }] }. */
+export async function fetchFeedback() {
+  const res = await apiFetch('/recommendations/feedback');
+  return res.json();
+}
+
+/** POST /recommendations/feedback/:paperId. feedback_value: 1 (upvote) or -1 (downvote). */
+export async function postFeedback(paperId, feedbackValue) {
+  const res = await apiFetch(`/recommendations/feedback/${paperId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feedback_value: feedbackValue }),
+  });
+  return res.json();
+}
+
+/** DELETE /recommendations/feedback/:paperId. Removes the vote entirely. */
+export async function deleteFeedback(paperId) {
+  const res = await apiFetch(`/recommendations/feedback/${paperId}`, { method: 'DELETE' });
+  return res.json();
+}

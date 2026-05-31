@@ -225,5 +225,38 @@ def _get_feedback_value(feedback_request: RecommendationFeedbackRequest) -> int:
 
 # Dont delete comments below
 # [GenAI Usage] LLM reseponse ends
-# I inspect the code via a top-down approach and identify the overall workflows. They look correct to me. 
+# I inspect the code via a top-down approach and identify the overall workflows. They look correct to me.
 # The code shall be accepted, because it uses helpful function to get paper and get feedback value. Then, in the main Post logic, it handles the request gracefully.
+
+@rec_router.get("/feedback")
+def get_user_feedback(auth: AuthContext = Depends(get_auth_context)):
+    client = auth.client
+    user_id = str(auth.user.id)
+    response = (
+        client
+        .table("recommendation_feedback")
+        .select("paper_id, feedback_value")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return {"feedback": response.data or []}
+
+
+@rec_router.delete("/feedback/{paper_id}", status_code=200)
+def delete_recommendation_feedback(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    client = auth.client
+    user_id = str(auth.user.id)
+    response = (
+        client
+        .table("recommendation_feedback")
+        .delete()
+        .eq("user_id", user_id)
+        .eq("paper_id", str(paper_id))
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return {"deleted": str(paper_id)}

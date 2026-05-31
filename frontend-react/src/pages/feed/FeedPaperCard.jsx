@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import PillButton from '../../components/atoms/PillButton.jsx';
-import { savePaper, unsavePaper } from '../../lib/api.js';
+import { deleteFeedback, postFeedback, savePaper, unsavePaper } from '../../lib/api.js';
 import { formatShortDate } from '../../lib/format.js';
 import ReasonBox from './ReasonBox.jsx';
 import styles from './FeedPaperCard.module.css';
@@ -45,21 +45,50 @@ export default function FeedPaperCard({ rec, unread }) {
       {paper.abstract ? <div className={styles.abstract}>{paper.abstract}</div> : null}
       {rec.explanation_summary ? <ReasonBox>{rec.explanation_summary}</ReasonBox> : null}
 
+      {/* [GenAI Usage] Prompt: Wire the upvote and downvote buttons to the feedback API.
+          Clicking an active vote should remove it (toggle to 0 via DELETE). Clicking the
+          opposite vote should switch directly. Use optimistic update + revert on error,
+          same pattern as the save button. */}
+      {/* [GenAI Usage] Response begins: */}
       <div className={styles.actions}>
         <PillButton
           variant="up"
           active={vote === 1}
-          onClick={() => setVote(vote === 1 ? 0 : 1)}
+          onClick={async () => {
+            const next = vote === 1 ? 0 : 1;
+            setVote(next);
+            try {
+              if (next === 0) await deleteFeedback(rec.paper_id);
+              else await postFeedback(rec.paper_id, next);
+            } catch {
+              setVote(vote);
+            }
+          }}
         >
           ▲
         </PillButton>
         <PillButton
           variant="down"
           active={vote === -1}
-          onClick={() => setVote(vote === -1 ? 0 : -1)}
+          onClick={async () => {
+            const next = vote === -1 ? 0 : -1;
+            setVote(next);
+            try {
+              if (next === 0) await deleteFeedback(rec.paper_id);
+              else await postFeedback(rec.paper_id, next);
+            } catch {
+              setVote(vote);
+            }
+          }}
         >
           ▼
         </PillButton>
+        {/* [GenAI Usage] Response ends */}
+        {/* [GenAI Reflection] The toggle logic captures the current `vote` in the closure so
+            the revert always restores the correct prior value even if the component re-renders
+            before the await resolves. Switching directly from upvote to downvote (or vice versa)
+            calls POST rather than DELETE, since the backend upserts on conflict, so no intermediate
+            removal step is needed. */}
         <PillButton variant="summary">✦ Summarize</PillButton>
         <PillButton variant="ghost" href={link}>
           ↗ {linkLabel}
