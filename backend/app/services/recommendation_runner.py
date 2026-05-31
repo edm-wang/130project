@@ -82,7 +82,13 @@ def generate_recommendations_for_user(
             final_count=len(inserted_recommendations),
         )
 
-        return completed_batch, _fetch_batch_recommendations(client, batch["id"])
+        recommendation_items =  _fetch_batch_recommendations(client, batch["id"])
+        with open("./recommendation_endpoint_logs.jsonl", "w") as f:
+            for idx, item in enumerate(recommendation_items):
+                f.write(json.dumps(item, indent=4))
+                f.write("\n")
+
+        return completed_batch, recommendation_items
     except Exception as exc:
         _fail_batch(client, batch["id"], exc)
         raise
