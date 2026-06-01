@@ -1,0 +1,11 @@
+# vercel.json GenAI Usage
+
+[GenAI Usage]: ChatGPT prompt: can you check why it is wrong (attached a screenshot of vercel deployment page with current build command, 
+start command and root directory)? I want to deploy my backend: https://github.com/JJerryJi/130project
+
+[GenAI Usage]: Responses are just content of vercel.json file 
+
+[GenAI Usage] Reflection:
+I utilize multi-modality of coding agent by providing details of my deployment issue along with my backend repo. 
+It checks my Vercel deployment configuration and structure of the code before giving me the correct vercel.json file, a solution that 
+shall be accepted.
