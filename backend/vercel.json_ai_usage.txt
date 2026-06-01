@@ -1,7 +1,10 @@
 # vercel.json GenAI Usage
+--- Why it is a separate txt file? ---
+Because vercel.json does not accept any additional fields that aims for comments. 
+So, I document the ai usage here in a separate txt file
 
 [GenAI Usage]: ChatGPT prompt: can you check why it is wrong (attached a screenshot of vercel deployment page with current build command, 
-start command and root directory)? I want to deploy my backend: https://github.com/JJerryJi/130project
+start command and root directory)?  want to deploy my backend: https://github.com/JJerryJi/130project
 
 [GenAI Usage]: Responses are just content of vercel.json file 
 
