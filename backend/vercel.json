@@ -1,6 +1,4 @@
 {
-  "_genai_usage": "[GenAI Usage]: ChatGPT prompt: can you check why it is wrong (attached a screenshot of vercel deployment page with current build command, start command and root directory)? i want to deploy my backend: https://github.com/JJerryJi/130project",
-  "_genai_reflection": "I utilize multi-modality of coding agent by providing details of my deployment issue along with my backend repo. It checks my vercel deployment configuration and structure of the code, before giving me the correct vercel.json file -- a solution that shall be accepted.",
   "version": 2,
   "builds": [
     {
