@@ -2,7 +2,7 @@
 PROMPT_VERSION = "paper_summary_v1"
 SECTION_PROMPT_VERSION = "paper_section_summary_v1"
 
-#[GenAI Usage] Prompt: the code below is the result of a conversation with Codex. The request was to extend the paper summary prompt layer so it can support both abstract-based summaries and PDF section-based summaries, while also allowing optional caller-provided instructions to customize the generated summary format or focus.
+#[GenAI Usage] Prompt: Extend the paper summary prompt layer so it can support both abstract-based summaries and PDF section-based summaries, while also allowing optional caller-provided instructions to customize the generated summary format or focus.
 #[GenAI Usage] LLM response begins
 
 def build_paper_summary_prompt(

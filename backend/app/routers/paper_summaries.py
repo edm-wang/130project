@@ -27,7 +27,7 @@ class SummaryGenerationRequest(BaseModel):
     fallback_to_abstract: bool = True
 
 
-#[GenAI Usage] Prompt: the code below is the result of a conversation with Codex. The request was to restore persistent paper-summary caching for the Team 3 summary MVP and then extend it to summarize papers by PDF section. The implementation should use the existing authenticated Supabase client, check whether a matching summary already exists for a paper, fetch and extract paper PDF sections when available, allow optional caller-provided summary instructions, fall back to abstract-based summaries when configured, save generated summaries to the paper_summaries table, and return a consistent JSON response for generated and cached summaries.
+#[GenAI Usage] Prompt: Restore persistent paper-summary caching for the Team 3 summary MVP and then extend it to summarize papers by PDF section. The implementation should use the existing authenticated Supabase client, check whether a matching summary already exists for a paper, fetch and extract paper PDF sections when available, allow optional caller-provided summary instructions, fall back to abstract-based summaries when configured, save generated summaries to the paper_summaries table, and return a consistent JSON response for generated and cached summaries.
 #[GenAI Usage] LLM response begins
 
 @summary_router.get('/{paper_id}')

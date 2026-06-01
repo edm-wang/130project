@@ -13,7 +13,7 @@ from app.services.summary_prompt import (
 MAX_ABSTRACT_CHARS = 12000
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
-#[GenAI Usage] Prompt: the code below is the result of a conversation with Codex. The request was to extend the LLM summary service so it can generate either abstract-based summaries or section-by-section summaries from extracted PDF sections, while preserving the existing OpenAI integration, model metadata, prompt version metadata, and error handling behavior.
+#[GenAI Usage] Prompt: Extend the LLM summary service so it can generate either abstract-based summaries or section-by-section summaries from extracted PDF sections, while preserving the existing OpenAI integration, model metadata, prompt version metadata, and error handling behavior.
 #[GenAI Usage] LLM response begins
 
 class SummaryGenerationError(Exception):

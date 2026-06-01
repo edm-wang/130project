@@ -13,7 +13,7 @@ MAX_SECTION_CHARS = 5000
 MAX_TOTAL_SECTION_CHARS = 24000
 
 
-#[GenAI Usage] Prompt: the code below is the result of a conversation with Codex. The request was to add a controlled PDF-section extraction pipeline for paper summaries. The implementation should download a paper PDF from a trusted paper metadata URL, extract readable text with a Python PDF parser, split the extracted text into common research-paper sections, and return bounded section text suitable for an LLM summary prompt.
+#[GenAI Usage] Prompt: Add a controlled PDF-section extraction pipeline for paper summaries. The implementation should download a paper PDF from a trusted paper metadata URL, extract readable text with a Python PDF parser, split the extracted text into common research-paper sections, and return bounded section text suitable for an LLM summary prompt.
 #[GenAI Usage] LLM response begins
 
 class PdfFetchError(Exception):
