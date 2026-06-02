@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 
 import useAuth from '../../hooks/useAuth.js';
 import Avatar from '../atoms/Avatar.jsx';
+import SearchBar from '../atoms/SearchBar.jsx';
 import styles from './Navbar.module.css';
 
 const LINKS = [
@@ -23,6 +24,18 @@ export default function Navbar() {
 
   const initials = deriveInitials(user && user.email);
   const displayName = user ? user.email : 'Not signed in';
+
+  // [GenAI Usage] Prompt: Integrate the SearchBar component into the navbar between the
+  // navigation links and the user profile section. The search handler should pass the query
+  // to the feed page via React Router state so the feed can filter papers client-side. I
+  // chose to use navigation state instead of URL params to keep the URL clean and because
+  // the search is temporary/ephemeral rather than something users would bookmark.
+  // [GenAI Usage] LLM response begins:
+  const handleSearch = (query) => {
+    console.log('Search query:', query);
+    navigate('/feed', { state: { searchQuery: query } });
+  };
+  // [GenAI Usage] LLM response ends
 
   return (
     <nav className={styles.nav}>
@@ -49,6 +62,8 @@ export default function Navbar() {
           </NavLink>
         ))}
       </div>
+
+      <SearchBar onSearch={handleSearch} placeholder="Search papers..." />
 
       <div className={styles.userBlock}>
         {status === 'signed-in' ? (

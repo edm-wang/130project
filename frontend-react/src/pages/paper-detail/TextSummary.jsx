@@ -4,6 +4,17 @@
 // summary.generatedAt). Detect which format is present and branch accordingly. Accept an optional
 // onRegenerate prop so the real data path can wire a regenerate button.
 // [GenAI Usage] Response begins:
+
+// [GenAI Usage 2] Prompt: The LLM summary service returns markdown-formatted text with headers,
+// bold text, and section structure (e.g., "# Overall TL;DR", "## Section-by-section Summary"),
+// but it was rendering as plain text with whiteSpace: pre-line. I needed proper markdown rendering
+// so headings appear bold and hierarchical, and emphasized text shows correctly. I asked Claude
+// to install react-markdown and replace the plain text rendering with <ReactMarkdown> component,
+// then add CSS to style the markdown elements (h1/h2/h3, strong, em, lists) to match the app's
+// design tokens. I verified that the markdown preserves the academic formatting from the LLM output.
+// [GenAI Usage 2] LLM response begins:
+import ReactMarkdown from 'react-markdown';
+// [GenAI Usage 2] LLM response ends (import only)
 import PillButton from '../../components/atoms/PillButton.jsx';
 import styles from './TextSummary.module.css';
 
@@ -34,9 +45,12 @@ export default function TextSummary({ summary, onRegenerate }) {
           <div className={styles.genDot} />
           AI summary generated · {summary.llm_model || 'gpt-4o-mini'}
         </div>
-        <div className={styles.summary} style={{ whiteSpace: 'pre-line' }}>
-          {summary.summary_text}
+        {/* [GenAI Usage 2] Changed from plain div with whiteSpace: pre-line to ReactMarkdown */}
+        {/* [GenAI Usage 2] LLM response begins */}
+        <div className={styles.summary}>
+          <ReactMarkdown>{summary.summary_text}</ReactMarkdown>
         </div>
+        {/* [GenAI Usage 2] LLM response ends */}
         <div className={styles.footerRow}>
           {onRegenerate && (
             <PillButton style={{ fontSize: 11 }} onClick={onRegenerate}>

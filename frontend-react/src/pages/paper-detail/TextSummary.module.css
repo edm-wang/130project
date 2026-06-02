@@ -1,7 +1,7 @@
 .summary {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  line-height: 1.8;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.7;
 }
 
 .summary p {
@@ -10,6 +10,69 @@
 .summary p:last-child {
   margin: 0;
 }
+
+/* [GenAI Usage 2] Markdown element styling for react-markdown output. The LLM generates
+   structured markdown with # headings and **bold** text, so I needed CSS to render those
+   properly. Used :global() to target elements created by ReactMarkdown since they're not
+   scoped to the module. Font sizes chosen to create clear hierarchy (h1 > h2 > h3) while
+   staying consistent with the app's typography scale. */
+/* [GenAI Usage 2] LLM response begins */
+/* Markdown styling */
+.summary :global(h1) {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: var(--color-text-primary);
+}
+
+.summary :global(h1:first-child) {
+  margin-top: 0;
+}
+
+.summary :global(h2) {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: var(--color-text-primary);
+}
+
+.summary :global(h3) {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--color-text-primary);
+}
+
+.summary :global(strong) {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.summary :global(em) {
+  font-style: italic;
+}
+
+.summary :global(ul),
+.summary :global(ol) {
+  margin-bottom: 12px;
+  padding-left: 24px;
+}
+
+.summary :global(li) {
+  margin-bottom: 6px;
+}
+
+.summary :global(code) {
+  font-family: var(--font-mono);
+  background: var(--color-background-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+/* [GenAI Usage 2] LLM response ends */
 
 .highlight {
   background: #e1f5ee;

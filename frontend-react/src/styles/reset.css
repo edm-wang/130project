@@ -12,13 +12,21 @@ body,
   min-height: 100vh;
 }
 
+/* [GenAI Usage] Changed body font from DM Sans to Merriweather Sans for a more academic feel.
+   Also increased base font-size from 13px to 14px and line-height from 1.6 to 1.7 to improve
+   readability with the serif font, which has different optical characteristics than the
+   previous sans-serif. */
+/* [GenAI Usage] LLM response begins */
 body {
-  font-family: 'DM Sans', var(--font-sans);
+  font-family: 'Merriweather Sans', var(--font-sans);
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--color-text-primary);
   background: var(--color-background-tertiary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* [GenAI Usage] LLM response ends */
 
 button {
   font: inherit;

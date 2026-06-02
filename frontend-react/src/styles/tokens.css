@@ -26,10 +26,15 @@
   --border-radius-md: 6px;
   --border-radius-lg: 10px;
 
-  /* Fonts (CSS rules already name DM families directly; these are fallbacks) */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif: Georgia, 'Times New Roman', serif;
+  /* [GenAI Usage] Updated font tokens to use Merriweather family for more scholarly appearance.
+     Merriweather Sans for UI elements (buttons, labels) and Merriweather serif for headings
+     and display text. Kept system font fallbacks for when Google Fonts fails to load. */
+  /* [GenAI Usage] LLM response begins */
+  /* Fonts - Academic style using Merriweather */
+  --font-sans: 'Merriweather Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Merriweather', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* [GenAI Usage] LLM response ends */
 
   /* Brand */
   --color-brand: #1d9e75;
