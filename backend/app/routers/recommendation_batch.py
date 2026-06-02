@@ -1,23 +1,28 @@
 from datetime import datetime, timezone, timedelta
 from math import ceil
+import os
+from types import SimpleNamespace
 from typing import Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel
 from supabase import Client
 
 from app.supabase.auth import AuthContext, get_auth_context
+from app.supabase.db import get_or_create_service_supabase_client
 from app.services.recommendation import RecGenParams
 from app.services.recommendation_runner import (
     _fetch_active_interests,
     _fetch_feedback_rows,
     _fetch_saved_paper_rows,
+    generate_recommendations_for_user,
     generate_recommentation_parameter_hash,
     generate_user_snapshot_hash,
 )
 
 rec_router = APIRouter(prefix='/recommendations')
+rec_job_router = APIRouter(prefix='/internal/jobs/recommendations')
 
 FRESH_RECOMMENDATION_WINDOW_SECONDS = 24 * 60 * 60
 DEFAULT_MIN_REC_GEN_RETRIEVAL_TOP_N = 100
@@ -118,6 +123,152 @@ def _get_recommendations_for_batch(
     )
     return _limit_recommendations(response.data or [], max_papers)
 
+# Don't delete comments below
+# [GenAI Usage] Codex Prompt: 
+# Following the similiar pattern of changing POST method to GET method of paper ingestion, implement the same GET recommendation batch
+# [GenAI Usage] LLM response begins:
+def _verify_cron_secret(
+    *,
+    authorization: Optional[str],
+    x_cron_job_secret: Optional[str],
+) -> None:
+    expected_cron_job_secret = (
+        os.getenv("CRON_SECRET")
+        or os.getenv("SUPABASE_CRON_JOB_SECRET")
+    )
+    if expected_cron_job_secret is None:
+        raise HTTPException(500, detail="Cron job secret is not specified")
+
+    bearer_secret = None
+    if isinstance(authorization, str) and authorization.startswith("Bearer "):
+        bearer_secret = authorization[7:].strip()
+
+    if bearer_secret != expected_cron_job_secret and x_cron_job_secret != expected_cron_job_secret:
+        raise HTTPException(401, detail="Invalid cron job secret")
+
+
+def _fetch_recommendation_job_user_ids(
+    client: Client,
+    *,
+    max_users: int,
+    user_id: Optional[UUID],
+) -> list[str]:
+    if user_id is not None:
+        return [str(user_id)]
+
+    response = (
+        client
+        .table("research_interests")
+        .select("user_id")
+        .eq("is_active", True)
+        .order("created_at")
+        .limit(max_users * 20)
+        .execute()
+    )
+
+    user_ids = []
+    seen_user_ids = set()
+    for row in response.data or []:
+        row_user_id = str(row.get("user_id") or "")
+        if not row_user_id or row_user_id in seen_user_ids:
+            continue
+
+        seen_user_ids.add(row_user_id)
+        user_ids.append(row_user_id)
+        if len(user_ids) >= max_users:
+            break
+
+    return user_ids
+
+
+@rec_job_router.get('')
+def run_recommendation_batch_cron_job(
+    max_users: int = Query(default=50, gt=0, le=500),
+    max_papers: Optional[int] = Query(default=None, ge=0),
+    user_id: Optional[UUID] = Query(default=None),
+    authorization: Optional[str] = Header(default=None),
+    x_cron_job_secret: Optional[str] = Header(default=None),
+):
+    _verify_cron_secret(
+        authorization=authorization,
+        x_cron_job_secret=x_cron_job_secret,
+    )
+
+    client = get_or_create_service_supabase_client()
+    target_user_ids = _fetch_recommendation_job_user_ids(
+        client,
+        max_users=max_users,
+        user_id=user_id,
+    )
+
+    results = []
+    generated_count = 0
+    skipped_count = 0
+    failed_count = 0
+
+    for target_user_id in target_user_ids:
+        user = SimpleNamespace(id=target_user_id)
+        active_interests = _fetch_active_interests(client, target_user_id)
+        if not active_interests:
+            skipped_count += 1
+            results.append({
+                "user_id": target_user_id,
+                "status": "skipped",
+                "reason": "no_active_interests",
+            })
+            continue
+
+        params = _get_recommendation_generation_parameters(client, user, max_papers)
+        reusable_batch = _get_reusable_completed_recommendation_batch(
+            client,
+            user,
+            params,
+        )
+        if reusable_batch:
+            skipped_count += 1
+            results.append({
+                "user_id": target_user_id,
+                "status": "skipped",
+                "reason": "fresh_completed_batch_exists",
+                "batch_id": reusable_batch["id"],
+            })
+            continue
+
+        try:
+            batch, recommendations = generate_recommendations_for_user(
+                client,
+                user,
+                params,
+            )
+            generated_count += 1
+            results.append({
+                "user_id": target_user_id,
+                "status": batch.get("status", "completed"),
+                "batch_id": batch["id"],
+                "recommendation_count": len(recommendations),
+            })
+        except Exception as exc:
+            failed_count += 1
+            results.append({
+                "user_id": target_user_id,
+                "status": "failed",
+                "error": str(exc),
+            })
+
+    return {
+        "status": "completed" if failed_count == 0 else "completed_with_failures",
+        "considered_count": len(target_user_ids),
+        "generated_count": generated_count,
+        "skipped_count": skipped_count,
+        "failed_count": failed_count,
+        "results": results,
+    }
+# Don't delete comments below
+# [GenAI Usage] LLM response ends
+# [GenAI Usage] Reflection
+# The code successfully implements
+# 1. cron secret verifcation
+# 2. GET endpoint of rec job
 
 @rec_router.get('')
 def get_recommendation_batch(
@@ -142,7 +293,6 @@ def get_recommendation_batch(
             )
         }
 
-    from app.services.recommendation_runner import generate_recommendations_for_user 
     batch, recommendations = generate_recommendations_for_user(client, user, rec_gen_params)
     response.status_code = 201
     return {
