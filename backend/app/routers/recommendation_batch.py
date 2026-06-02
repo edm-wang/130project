@@ -130,12 +130,8 @@ def _get_recommendations_for_batch(
 def _verify_cron_secret(
     *,
     authorization: Optional[str],
-    x_cron_job_secret: Optional[str],
 ) -> None:
-    expected_cron_job_secret = (
-        os.getenv("CRON_SECRET")
-        or os.getenv("SUPABASE_CRON_JOB_SECRET")
-    )
+    expected_cron_job_secret = os.getenv("CRON_SECRET")
     if expected_cron_job_secret is None:
         raise HTTPException(500, detail="Cron job secret is not specified")
 
@@ -143,7 +139,7 @@ def _verify_cron_secret(
     if isinstance(authorization, str) and authorization.startswith("Bearer "):
         bearer_secret = authorization[7:].strip()
 
-    if bearer_secret != expected_cron_job_secret and x_cron_job_secret != expected_cron_job_secret:
+    if bearer_secret != expected_cron_job_secret:
         raise HTTPException(401, detail="Invalid cron job secret")
 
 
@@ -187,11 +183,9 @@ def run_recommendation_batch_cron_job(
     max_papers: Optional[int] = Query(default=None, ge=0),
     user_id: Optional[UUID] = Query(default=None),
     authorization: Optional[str] = Header(default=None),
-    x_cron_job_secret: Optional[str] = Header(default=None),
 ):
     _verify_cron_secret(
         authorization=authorization,
-        x_cron_job_secret=x_cron_job_secret,
     )
 
     client = get_or_create_service_supabase_client()
