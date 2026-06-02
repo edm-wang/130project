@@ -18,12 +18,8 @@ class IngestionJobPayload(BaseModel):
 def _verify_cron_secret(
     *,
     authorization: Optional[str],
-    x_cron_job_secret: Optional[str],
 ) -> None:
-    expected_cron_job_secret = (
-        os.getenv("CRON_SECRET")
-        or os.getenv("SUPABASE_CRON_JOB_SECRET")
-    )
+    expected_cron_job_secret = os.getenv("CRON_SECRET")
     if expected_cron_job_secret is None:
         raise HTTPException(500, detail="Cron job secret is not specified")
 
@@ -31,7 +27,7 @@ def _verify_cron_secret(
     if isinstance(authorization, str) and authorization.startswith("Bearer "):
         bearer_secret = authorization[7:].strip()
 
-    if bearer_secret != expected_cron_job_secret and x_cron_job_secret != expected_cron_job_secret:
+    if bearer_secret != expected_cron_job_secret:
         raise HTTPException(401, detail="Invalid cron job secret")
 
 
@@ -51,11 +47,9 @@ def run_paper_ingestion_cron_job(
     categories: Optional[list[str]] = Query(default=None),
     max_results: int = Query(default=1000, gt=0, le=10000),
     authorization: Optional[str] = Header(default=None),
-    x_cron_job_secret: Optional[str] = Header(default=None),
 ):
     _verify_cron_secret(
         authorization=authorization,
-        x_cron_job_secret=x_cron_job_secret,
     )
     return _run_paper_ingestion(
         IngestionJobPayload(
@@ -70,11 +64,9 @@ def run_paper_ingestion_cron_job(
 def run_paper_ingestion_job(
     payload: IngestionJobPayload,
     authorization: Optional[str] = Header(default=None),
-    x_cron_job_secret: Optional[str] = Header(default=None),
 ):
     _verify_cron_secret(
         authorization=authorization,
-        x_cron_job_secret=x_cron_job_secret,
     )
     return _run_paper_ingestion(payload)
 # Don't delete comments below

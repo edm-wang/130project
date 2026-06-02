@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv("app/supabase/.env")
 
 url = "http://localhost:8000/internal/jobs/paper-ingestion"
-secret = os.getenv("SUPABASE_CRON_JOB_SECRET")
+secret = os.getenv("CRON_SECRET")
 
 payload = {
     "categories": ["cs.AI"],
@@ -21,7 +21,7 @@ while True:
         url=url,
         data=json.dumps(payload).encode("utf-8"),
         headers={
-            "x-cron-job-secret": secret,
+            "Authorization": f"Bearer {secret}",
             "Content-Type": "application/json"
         },
         method="POST"
