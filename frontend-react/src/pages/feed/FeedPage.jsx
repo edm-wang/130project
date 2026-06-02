@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import InterestTag from '../../components/atoms/InterestTag.jsx';
 import EmailDigestWidget from '../../components/widgets/EmailDigestWidget.jsx';
@@ -68,6 +68,9 @@ function getPageItems(currentPage, totalPages) {
 
 export default function FeedPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchQuery = location.state?.searchQuery || '';
+
   const { status: profileStatus } = useProfile();
   const { status, batch, recommendations, error } = useRecommendations({
     enabled: profileStatus !== 'loading' && profileStatus !== 'no-profile',
@@ -77,17 +80,41 @@ export default function FeedPage() {
   const savedPaperIds = new Set(savedPapers.map((p) => p.id));
   const { voteByPaperId } = useFeedback();
 
-  // Dont delete comments below 
+  // [GenAI Usage] Prompt: Add client-side search filtering to the feed that checks the
+  // search query (passed via router state) against paper titles, authors, and abstracts.
+  // The filter needs to handle the nested data structure where paper data lives inside
+  // rec.paper (not directly on rec). Initially Claude got the field names wrong because
+  // it assumed flat structure, so I had to debug by looking at FeedPaperCard to see the
+  // actual shape (rec.paper.title, rec.paper.authors_text, rec.paper.abstract). The
+  // filtering should be case-insensitive and match partial strings.
+  // [GenAI Usage] LLM response begins:
+  const filteredRecommendations = searchQuery
+    ? recommendations.filter((rec) => {
+        const searchLower = searchQuery.toLowerCase();
+        const paper = rec.paper || {};
+        const titleMatch = paper.title?.toLowerCase().includes(searchLower);
+        const authorsMatch = paper.authors_text?.toLowerCase().includes(searchLower);
+        const abstractMatch = paper.abstract?.toLowerCase().includes(searchLower);
+        return titleMatch || authorsMatch || abstractMatch;
+      })
+    : recommendations;
+  // [GenAI Usage] LLM response ends
+  // [GenAI Reflection] I tested the initial implementation and got 0 results for every
+  // query, which led me to realize the data structure assumption was wrong. After checking
+  // how FeedPaperCard accesses the data, I corrected the field paths and verified the
+  // filtering works across all three fields (title, authors, abstract).
+
+  // Dont delete comments below
   // [GenAI Usage] Prompt: add client-side pagination to the feed — show PAGE_SIZE papers at a time,
   // wire the existing "Load more" button to reveal the next page, and reset when a new batch loads.
   // [GenAI Usage] Response begins:
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const totalPages = Math.max(1, Math.ceil(recommendations.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredRecommendations.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
   const pageStart = (currentPageSafe - 1) * pageSize;
   const pageEnd = pageStart + pageSize;
-  const visibleRecommendations = recommendations.slice(pageStart, pageEnd);
+  const visibleRecommendations = filteredRecommendations.slice(pageStart, pageEnd);
   const pageItems = getPageItems(currentPageSafe, totalPages);
 
   // Reset pagination when a new batch loads.
@@ -148,7 +175,37 @@ export default function FeedPage() {
 
         {/* FEED ------------------------------------------------------------- */}
         <main className={styles.feed}>
-          <FeedHeader batch={batch} count={recommendations.length} />
+          {searchQuery && (
+            <div style={{
+              padding: '10px 16px',
+              marginBottom: '12px',
+              background: 'var(--color-background-secondary)',
+              borderRadius: 'var(--border-radius-md)',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <span>
+                Searching for: <strong>{searchQuery}</strong> ({filteredRecommendations.length} results)
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/feed', { replace: true })}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  border: '0.5px solid var(--color-border-tertiary)',
+                  borderRadius: 'var(--border-radius-md)',
+                  background: 'var(--color-background-primary)',
+                  cursor: 'pointer',
+                }}
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+          <FeedHeader batch={batch} count={filteredRecommendations.length} />
 
           {profileStatus === 'no-profile' ? (
             <div className={styles.status}>

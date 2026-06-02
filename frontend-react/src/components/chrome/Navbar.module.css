@@ -9,10 +9,11 @@
 }
 
 .logo {
-  font-family: 'DM Serif Display', var(--font-serif);
+  font-family: 'Merriweather', var(--font-serif);
   font-size: 20px;
+  font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 .logo span {
   color: var(--color-brand);
