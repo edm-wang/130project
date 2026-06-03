@@ -5,10 +5,12 @@
 // from the live savedPapers array. Replace the stats widget with "coming soon".
 // [GenAI Usage] Response Starts:
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import PageTabs from '../../components/chrome/PageTabs.jsx';
 import Badge from '../../components/atoms/Badge.jsx';
 import Widget from '../../components/widgets/Widget.jsx';
+import { unsavePaper } from '../../lib/api.js';
 
 import ReadingListFilters from './ReadingListFilters.jsx';
 import ReadingListRow from './ReadingListRow.jsx';
@@ -21,10 +23,20 @@ const PAGE_TABS = [
 ];
 
 export default function ReadingListPage() {
+  const navigate = useNavigate();
   const [pageTab, setPageTab] = useState('list');
   const [filter, setFilter] = useState('All');
 
-  const { status, savedPapers, filterChips, error } = useSavedPapers();
+  const { status, savedPapers, filterChips, error, removePaper } = useSavedPapers();
+
+  async function handleRemove(paperId) {
+    removePaper(paperId);
+    try {
+      await unsavePaper(paperId);
+    } catch {
+      // optimistic removal; silently ignore if backend call fails
+    }
+  }
 
   const filtered = savedPapers.filter((p) => {
     if (filter === 'All') return true;
@@ -92,7 +104,14 @@ export default function ReadingListPage() {
               )}
 
               {filtered.map((paper, i) => (
-                <ReadingListRow key={paper.id} paper={paper} index={i} />
+                <ReadingListRow
+                  key={paper.id}
+                  paper={paper}
+                  index={i}
+                  onOpen={() => paper.sourceUrl ? window.open(paper.sourceUrl, '_blank', 'noopener,noreferrer') : navigate(`/papers/${paper.id}`)}
+                  onTextSummary={() => navigate(`/papers/${paper.id}?tab=text`)}
+                  onRemove={() => handleRemove(paper.id)}
+                />
               ))}
             </div>
           )}
@@ -164,3 +183,11 @@ export default function ReadingListPage() {
 // correctly and handles papers with multiple categories, and confirmed that the filter logic
 // (filter === 'Unread' returns !p.read) is unchanged from the original mock implementation
 // so existing behaviour is preserved when switching to live data.
+// Later extended to wire up the action buttons on each ReadingListRow: added useNavigate so
+// onOpen and onTextSummary can push /papers/:id and /papers/:id?tab=text without the row
+// needing to know about routing, and added handleRemove which does an optimistic delete —
+// removePaper runs first so the UI updates instantly, then unsavePaper fires the DELETE in the
+// background. I decided to silently swallow errors on the backend call since a failed unsave
+// is low stakes and re-fetching the whole list just to re-add one row felt like overkill.
+// Later changed onOpen to open paper.sourceUrl (the arXiv link stored on the backend) in a
+// new tab instead of navigating internally, with a fallback to /papers/:id if no URL is set.

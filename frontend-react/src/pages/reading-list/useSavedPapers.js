@@ -26,6 +26,7 @@ function toRowShape(row) {
     categories: Array.isArray(paper.categories) ? paper.categories : [],
     isNew,
     read: false,
+    sourceUrl: paper.source_url || null,
   };
 }
 
@@ -44,6 +45,13 @@ export default function useSavedPapers() {
     filterChips: ['All', 'Unread'],
     error: '',
   });
+
+  function removePaper(paperId) {
+    setState((s) => {
+      const updated = s.savedPapers.filter((p) => p.id !== paperId);
+      return { ...s, savedPapers: updated, filterChips: deriveChips(updated) };
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +116,7 @@ export default function useSavedPapers() {
     return () => { cancelled = true; };
   }, [auth.status, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return state;
+  return { ...state, removePaper };
 }
 // [GenAI Usage] Response Ends
 // [GenAI Usage] Reflection:
@@ -118,3 +126,6 @@ export default function useSavedPapers() {
 // /papers/{id}, checked the meta formatter handles null authors_text and null published_at without
 // crashing, and verified the 48-hour isNew window uses Date.now() correctly. I also confirmed
 // that rows with a null paper join are filtered out to guard against orphaned saved_papers rows.
+// Later added removePaper so the reading list page can do an optimistic delete: the function
+// filters the paper out of savedPapers and re-derives filterChips in one setState call, keeping
+// the chip counts in sync without needing a full refetch after the DELETE /saved-papers/:id call.
