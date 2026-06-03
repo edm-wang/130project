@@ -171,10 +171,13 @@ def create_video_summary_artifacts(
         static_root=static_root,
     )
 
+    video_url = _artifact_url(video_path, static_root, storage_urls)
+    # parental path
+    out_dir = video_url.rsplit("/", 1)[0] + "/"
     return VideoSummaryArtifact(
-        output_dir=_artifact_url(output_dir, static_root, storage_urls),
+        output_dir=out_dir,
         pptx_path=_artifact_url(pptx_path, static_root, storage_urls),
-        video_path=_artifact_url(video_path, static_root, storage_urls),
+        video_path=video_url,
         silent_video_path=(
             _artifact_url(silent_video_path, static_root, storage_urls)
             if silent_video_path
