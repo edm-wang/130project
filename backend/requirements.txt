@@ -6,3 +6,8 @@ sqlmodel
 pytest
 openai
 pypdf
+python-pptx
+Pillow
+imageio
+imageio-ffmpeg
+pymupdf
