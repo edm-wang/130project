@@ -372,9 +372,10 @@ def _content_type_for_file(file_path: Path) -> str:
 # [GenAI Usage] Reflection:
 # When I test this feature on deployed Vercel server, I got an internal server error 500, because the deployed FastAPI route crashed due to OS exception. 
 # The cause is that the legacy generation pipeline need to create new files in ./generated/video_summaries folder, which is read-only.
-# The fix is to treat local files as scratch artifacts only: render under /tmp on Vercel, upload the final video/PPTX/scripts/subtitles/images/audio to durable Supabase Storage,
-# and return Supabase Storage public URLs to the frontend. The service does not return or serve local scratch paths; missing Supabase Storage configuration is a server configuration error.
-
+# The fix is to treat local files as scratch artifacts only: render under /tmp on Vercel, upload the final video/PPTX/scripts/subtitles/images/audio to durable Supabase file system.
+# Alongside changes in this file, Codex will create a robust migration sql to define and create a new storage bucket to persist video summary.
+# Finally, return the storage url to frontend for rendering
+# The code shall be accepted right now, although there might be pending consistency issue. However, it suffices to be a good starting point. We will fix the upcoming issue later when encountered. We would imagine and endure some failures in production, because it is a beta-feature.
 def _slides_from_plan(
     *,
     title: str,
