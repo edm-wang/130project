@@ -9,7 +9,7 @@ ingestion_router = APIRouter(prefix='/internal/jobs/paper-ingestion')
 class IngestionJobPayload(BaseModel):
     target_date: Optional[date] = None
     categories: Optional[list[str]] = None
-    max_results: int = Field(default=500, gt=0, le=10000)
+    max_results: int = Field(default=300, gt=0, le=10000)
 
 # Don't delete comments below
 # [GenAI Usage] Codex Prompt: 
@@ -70,7 +70,7 @@ def _run_domain_paper_ingestion(
 def run_paper_ingestion_cron_job(
     target_date: Optional[date] = Query(default=None),
     categories: Optional[list[str]] = Query(default=None),
-    max_results: int = Query(default=500, gt=0, le=10000),
+    max_results: int = Query(default=300, gt=0, le=10000),
     authorization: Optional[str] = Header(default=None),
 ):
     _verify_cron_secret(
@@ -93,7 +93,7 @@ def run_paper_ingestion_cron_job(
 def run_domain_paper_ingestion_cron_job(
     domain: str,
     target_date: Optional[date] = Query(default=None),
-    max_results: int = Query(default=500, gt=0, le=10000),
+    max_results: int = Query(default=300, gt=0, le=10000),
     authorization: Optional[str] = Header(default=None),
 ):
     _verify_cron_secret(
