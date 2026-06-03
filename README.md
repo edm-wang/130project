@@ -32,7 +32,7 @@ npm install
 npm run dev
 ```
 
-The frontend must run on port 3000 (enforced by `vite.config.js`) because the backend's CORS allowlist is hardcoded to `http://localhost:3000`.
+The local frontend must run on port 3000 (enforced by `vite.config.js`) because the backend's CORS allowlist includes `http://localhost:3000`. The deployed frontend origin `https://130project-frontend.vercel.app` is also allowed.
 
 Open **http://localhost:3000** in your browser.
 
