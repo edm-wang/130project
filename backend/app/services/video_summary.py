@@ -1,0 +1,750 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
+import json
+import re
+import subprocess
+from textwrap import wrap
+
+
+DEFAULT_OUTPUT_ROOT = Path("generated/video_summaries")
+SLIDE_WIDTH = 1280
+SLIDE_HEIGHT = 720
+VIDEO_FPS = 2
+MAX_VIDEO_SLIDES = 8
+
+
+#[GenAI Usage] Prompt: implement the video summary functionality. Make it similar to text summary, but instead use a python package that directly creates presentation slides, . Write the script with timestamps. Then play the slides with the timestamps and render a video.
+#[GenAI Usage] LLM response begins
+
+class VideoSummaryError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class VideoSlide:
+    title: str
+    bullets: list[str]
+    narration: str
+    subtitle: str
+    duration_seconds: int
+    visual_asset_index: int | None = None
+    visual_path: str | None = None
+    visual_caption: str | None = None
+    visual_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class TimestampedScriptLine:
+    start_seconds: int
+    end_seconds: int
+    slide_title: str
+    narration: str
+    subtitle: str
+
+
+@dataclass(frozen=True)
+class VideoSummaryArtifact:
+    output_dir: str
+    pptx_path: str
+    video_path: str
+    silent_video_path: str | None
+    audio_path: str | None
+    script_path: str
+    script_json_path: str
+    subtitle_vtt_path: str
+    subtitle_srt_path: str
+    asset_metadata_path: str
+    slide_image_paths: list[str]
+    visual_asset_paths: list[str]
+    slides: list[dict]
+    script: list[dict]
+    voiceover: dict | None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def create_video_summary_artifacts(
+    *,
+    paper_id: str,
+    title: str,
+    summary_text: str,
+    slide_plan: list[dict] | None = None,
+    image_assets: list | None = None,
+    video_instructions: str | None = None,
+    slide_duration_seconds: int = 8,
+    include_voiceover: bool = False,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+) -> VideoSummaryArtifact:
+    if not summary_text or not summary_text.strip():
+        raise VideoSummaryError("Summary text is required before making a video.")
+
+    output_dir = output_root / paper_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    visual_assets = image_assets or []
+    slides = _slides_from_plan(
+        title=title,
+        slide_plan=slide_plan,
+        image_assets=visual_assets,
+        summary_text=summary_text,
+        video_instructions=video_instructions,
+        slide_duration_seconds=slide_duration_seconds,
+    )
+    voiceover = None
+    if include_voiceover:
+        try:
+            from app.services.voiceover import (
+                VoiceoverError,
+                generate_elevenlabs_voiceover,
+                voiceover_slide_durations,
+            )
+            voiceover = generate_elevenlabs_voiceover(
+                slides,
+                output_dir / "audio",
+            )
+            slides = _apply_voiceover_durations(
+                slides,
+                voiceover_slide_durations(voiceover),
+            )
+        except VoiceoverError as exc:
+            raise VideoSummaryError(str(exc)) from exc
+
+    script = _build_timestamped_script(slides)
+
+    pptx_path = output_dir / "video_summary.pptx"
+    script_path = output_dir / "video_summary_script.txt"
+    script_json_path = output_dir / "video_summary_script.json"
+    subtitle_vtt_path = output_dir / "video_summary_subtitles.vtt"
+    subtitle_srt_path = output_dir / "video_summary_subtitles.srt"
+    asset_metadata_path = output_dir / "video_summary_assets.json"
+    video_path = output_dir / "video_summary.mp4"
+    silent_video_path = output_dir / "video_summary_silent.mp4" if voiceover else None
+    frames_dir = output_dir / "frames"
+    frames_dir.mkdir(exist_ok=True)
+
+    _write_presentation(slides, pptx_path)
+    slide_image_paths = _render_slide_images(slides, frames_dir)
+    _write_script(script, script_path)
+    _write_script_json(script, script_json_path)
+    _write_vtt(script, subtitle_vtt_path)
+    _write_srt(script, subtitle_srt_path)
+    _write_asset_metadata(visual_assets, asset_metadata_path)
+    rendered_video_path = silent_video_path or video_path
+    _render_video(slide_image_paths, slides, rendered_video_path)
+    if voiceover:
+        _mux_video_audio(
+            rendered_video_path,
+            Path(voiceover.combined_audio_path),
+            video_path,
+        )
+
+    return VideoSummaryArtifact(
+        output_dir=str(output_dir),
+        pptx_path=str(pptx_path),
+        video_path=str(video_path),
+        silent_video_path=str(silent_video_path) if silent_video_path else None,
+        audio_path=voiceover.combined_audio_path if voiceover else None,
+        script_path=str(script_path),
+        script_json_path=str(script_json_path),
+        subtitle_vtt_path=str(subtitle_vtt_path),
+        subtitle_srt_path=str(subtitle_srt_path),
+        asset_metadata_path=str(asset_metadata_path),
+        slide_image_paths=[str(path) for path in slide_image_paths],
+        visual_asset_paths=[asset.path for asset in visual_assets],
+        slides=[asdict(slide) for slide in slides],
+        script=[asdict(line) for line in script],
+        voiceover=voiceover.to_dict() if voiceover else None,
+    )
+
+
+def _slides_from_plan(
+    *,
+    title: str,
+    slide_plan: list[dict] | None,
+    image_assets: list,
+    summary_text: str,
+    video_instructions: str | None,
+    slide_duration_seconds: int,
+) -> list[VideoSlide]:
+    if not slide_plan:
+        return _build_fallback_slides(
+            title=title,
+            summary_text=summary_text,
+            video_instructions=video_instructions,
+            slide_duration_seconds=slide_duration_seconds,
+            image_assets=image_assets,
+        )
+
+    asset_by_index = {asset.index: asset for asset in image_assets}
+    slides: list[VideoSlide] = []
+    default_duration = _clamp_duration(slide_duration_seconds)
+
+    for index, raw_slide in enumerate(slide_plan[:MAX_VIDEO_SLIDES]):
+        title_text = _clean_text(raw_slide.get("title"), limit=72) or f"Slide {index + 1}"
+        bullets = _clean_bullets(raw_slide.get("bullets"))
+        narration = _clean_text(raw_slide.get("narration"), limit=900)
+        if not narration:
+            narration = _bullets_to_narration(title_text, bullets, video_instructions)
+        subtitle = _clean_text(raw_slide.get("subtitle"), limit=260) or _short_caption(narration)
+        duration = _coerce_duration(raw_slide.get("duration_seconds"), default_duration)
+
+        visual_asset_index = _coerce_int(raw_slide.get("visual_asset_index"))
+        visual_asset = asset_by_index.get(visual_asset_index)
+        if visual_asset is None and image_assets:
+            visual_asset = image_assets[index % len(image_assets)]
+            visual_asset_index = visual_asset.index
+
+        slides.append(
+            VideoSlide(
+                title=title_text,
+                bullets=bullets or [_short_caption(narration, limit=110)],
+                narration=narration,
+                subtitle=subtitle,
+                duration_seconds=duration,
+                visual_asset_index=visual_asset_index if visual_asset else None,
+                visual_path=visual_asset.path if visual_asset else None,
+                visual_caption=_clean_text(
+                    raw_slide.get("visual_caption")
+                    or (visual_asset.label if visual_asset else None),
+                    limit=150,
+                ),
+                visual_reason=_clean_text(raw_slide.get("visual_reason"), limit=220),
+            )
+        )
+
+    return slides or _build_fallback_slides(
+        title=title,
+        summary_text=summary_text,
+        video_instructions=video_instructions,
+        slide_duration_seconds=slide_duration_seconds,
+        image_assets=image_assets,
+    )
+
+
+def _build_fallback_slides(
+    *,
+    title: str,
+    summary_text: str,
+    video_instructions: str | None,
+    slide_duration_seconds: int,
+    image_assets: list,
+) -> list[VideoSlide]:
+    duration = _clamp_duration(slide_duration_seconds)
+    sections = _summary_to_sections(summary_text)
+    slides: list[VideoSlide] = [
+        VideoSlide(
+            title="Paper at a Glance",
+            bullets=[_clean_text(title, limit=120)],
+            narration=f"This video summarizes the paper: {title}.",
+            subtitle=f"Summary of {title}",
+            duration_seconds=duration,
+            visual_asset_index=image_assets[0].index if image_assets else None,
+            visual_path=image_assets[0].path if image_assets else None,
+            visual_caption=image_assets[0].label if image_assets else None,
+        )
+    ]
+
+    for index, (heading, content) in enumerate(sections[:5], start=1):
+        bullets = _content_to_bullets(content)
+        if not bullets:
+            continue
+        visual_asset = image_assets[index % len(image_assets)] if image_assets else None
+        narration = _bullets_to_narration(heading, bullets, video_instructions)
+        slides.append(
+            VideoSlide(
+                title=heading,
+                bullets=bullets,
+                narration=narration,
+                subtitle=_short_caption(narration),
+                duration_seconds=_estimate_duration(narration, duration),
+                visual_asset_index=visual_asset.index if visual_asset else None,
+                visual_path=visual_asset.path if visual_asset else None,
+                visual_caption=visual_asset.label if visual_asset else None,
+            )
+        )
+
+    return slides
+
+
+def _summary_to_sections(summary_text: str) -> list[tuple[str, str]]:
+    sections: list[tuple[str, str]] = []
+    current_heading = "Summary"
+    current_lines: list[str] = []
+
+    for line in summary_text.splitlines():
+        clean_line = line.strip()
+        heading_match = re.match(r"^#{1,4}\s+(.+)$", clean_line)
+        if heading_match:
+            if current_lines:
+                sections.append((current_heading, "\n".join(current_lines).strip()))
+                current_lines = []
+            current_heading = heading_match.group(1).strip()
+            continue
+        current_lines.append(clean_line)
+
+    if current_lines:
+        sections.append((current_heading, "\n".join(current_lines).strip()))
+
+    return sections or [("Summary", summary_text)]
+
+
+def _content_to_bullets(content: str, *, max_bullets: int = 3) -> list[str]:
+    bullets = []
+    for line in content.splitlines():
+        clean_line = re.sub(r"^[\-*•]\s*", "", line).strip()
+        clean_line = re.sub(r"^\d+\.\s*", "", clean_line)
+        clean_line = clean_line.strip("#*` ")
+        if clean_line:
+            bullets.append(clean_line)
+        if len(bullets) >= max_bullets:
+            break
+
+    if bullets:
+        return [_clean_text(bullet, 105) for bullet in bullets]
+
+    sentences = re.split(r"(?<=[.!?])\s+", content.strip())
+    return [
+        _clean_text(sentence, 105)
+        for sentence in sentences
+        if sentence
+    ][:max_bullets]
+
+
+def _bullets_to_narration(
+    heading: str,
+    bullets: list[str],
+    video_instructions: str | None,
+) -> str:
+    narration = f"{heading}. " + " ".join(bullets)
+    if video_instructions and video_instructions.strip():
+        narration += f" Presentation note: {video_instructions.strip()[:500]}"
+    return narration
+
+
+def _build_timestamped_script(slides: list[VideoSlide]) -> list[TimestampedScriptLine]:
+    script = []
+    cursor = 0
+    for slide in slides:
+        end = cursor + slide.duration_seconds
+        script.append(
+            TimestampedScriptLine(
+                start_seconds=cursor,
+                end_seconds=end,
+                slide_title=slide.title,
+                narration=slide.narration,
+                subtitle=slide.subtitle,
+            )
+        )
+        cursor = end
+    return script
+
+
+def _apply_voiceover_durations(
+    slides: list[VideoSlide],
+    durations: list[int],
+) -> list[VideoSlide]:
+    updated_slides = []
+    for index, slide in enumerate(slides):
+        if index < len(durations):
+            updated_slides.append(
+                replace(slide, duration_seconds=max(2, durations[index]))
+            )
+        else:
+            updated_slides.append(slide)
+    return updated_slides
+
+
+def _write_presentation(slides: list[VideoSlide], pptx_path: Path) -> None:
+    try:
+        from pptx import Presentation
+        from pptx.dml.color import RGBColor
+        from pptx.enum.shapes import MSO_SHAPE
+        from pptx.util import Inches, Pt
+    except ImportError as exc:
+        raise VideoSummaryError("python-pptx is not installed.") from exc
+
+    presentation = Presentation()
+    presentation.slide_width = Inches(13.333)
+    presentation.slide_height = Inches(7.5)
+
+    for slide_number, slide_spec in enumerate(slides, start=1):
+        slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+        background = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            0,
+            0,
+            presentation.slide_width,
+            presentation.slide_height,
+        )
+        background.fill.solid()
+        background.fill.fore_color.rgb = RGBColor(249, 247, 242)
+        background.line.fill.background()
+
+        accent = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0),
+            Inches(0),
+            Inches(0.18),
+            presentation.slide_height,
+        )
+        accent.fill.solid()
+        accent.fill.fore_color.rgb = RGBColor(13, 116, 109)
+        accent.line.fill.background()
+
+        title_box = slide.shapes.add_textbox(Inches(0.55), Inches(0.42), Inches(6.45), Inches(0.78))
+        title_frame = title_box.text_frame
+        title_frame.text = slide_spec.title
+        title_frame.paragraphs[0].font.size = Pt(27)
+        title_frame.paragraphs[0].font.bold = True
+        title_frame.paragraphs[0].font.color.rgb = RGBColor(31, 41, 55)
+
+        body_box = slide.shapes.add_textbox(Inches(0.68), Inches(1.62), Inches(5.95), Inches(4.7))
+        body_frame = body_box.text_frame
+        body_frame.word_wrap = True
+        body_frame.margin_left = 0
+        body_frame.margin_right = 0
+        for index, bullet in enumerate(slide_spec.bullets[:3]):
+            paragraph = body_frame.paragraphs[0] if index == 0 else body_frame.add_paragraph()
+            paragraph.text = bullet
+            paragraph.level = 0
+            paragraph.font.size = Pt(20)
+            paragraph.font.color.rgb = RGBColor(31, 41, 55)
+            paragraph.space_after = Pt(14)
+
+        visual_box = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            Inches(7.05),
+            Inches(1.18),
+            Inches(5.65),
+            Inches(4.72),
+        )
+        visual_box.fill.solid()
+        visual_box.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        visual_box.line.color.rgb = RGBColor(226, 232, 240)
+
+        if slide_spec.visual_path and Path(slide_spec.visual_path).exists():
+            _add_fit_picture(slide, slide_spec.visual_path, Inches(7.25), Inches(1.36), Inches(5.25), Inches(4.18))
+        else:
+            placeholder = slide.shapes.add_textbox(Inches(7.45), Inches(2.65), Inches(4.8), Inches(0.95))
+            placeholder.text_frame.text = "Conceptual overview"
+            placeholder.text_frame.paragraphs[0].font.size = Pt(24)
+            placeholder.text_frame.paragraphs[0].font.bold = True
+            placeholder.text_frame.paragraphs[0].font.color.rgb = RGBColor(13, 116, 109)
+
+        if slide_spec.visual_caption:
+            caption_box = slide.shapes.add_textbox(Inches(7.15), Inches(6.02), Inches(5.45), Inches(0.48))
+            caption_box.text_frame.text = slide_spec.visual_caption
+            caption_box.text_frame.paragraphs[0].font.size = Pt(10.5)
+            caption_box.text_frame.paragraphs[0].font.color.rgb = RGBColor(100, 116, 139)
+
+        footer = slide.shapes.add_textbox(Inches(0.65), Inches(6.86), Inches(6.5), Inches(0.28))
+        footer.text_frame.text = f"Slide {slide_number} / {len(slides)}"
+        footer.text_frame.paragraphs[0].font.size = Pt(9.5)
+        footer.text_frame.paragraphs[0].font.color.rgb = RGBColor(100, 116, 139)
+
+    presentation.save(pptx_path)
+
+
+def _add_fit_picture(slide, image_path: str, left, top, max_width, max_height) -> None:
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise VideoSummaryError("Pillow is not installed.") from exc
+
+    try:
+        with Image.open(image_path) as image:
+            image_width, image_height = image.size
+    except OSError:
+        return
+
+    ratio = min(max_width / image_width, max_height / image_height)
+    width = int(image_width * ratio)
+    height = int(image_height * ratio)
+    centered_left = left + int((max_width - width) / 2)
+    centered_top = top + int((max_height - height) / 2)
+    slide.shapes.add_picture(image_path, centered_left, centered_top, width=width, height=height)
+
+
+def _render_slide_images(slides: list[VideoSlide], frames_dir: Path) -> list[Path]:
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageOps
+    except ImportError as exc:
+        raise VideoSummaryError("Pillow is not installed.") from exc
+
+    title_font = _load_font(ImageFont, 42)
+    bullet_font = _load_font(ImageFont, 27)
+    small_font = _load_font(ImageFont, 20)
+    caption_font = _load_font(ImageFont, 16)
+    frame_paths = []
+
+    for index, slide in enumerate(slides, start=1):
+        image = Image.new("RGB", (SLIDE_WIDTH, SLIDE_HEIGHT), "#f9f7f2")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((0, 0, 20, SLIDE_HEIGHT), fill="#0d746d")
+        draw.rectangle((60, 55, 90, 61), fill="#d97706")
+        _draw_wrapped_text(draw, slide.title, (60, 78), title_font, "#1f2937", 31, 2, line_gap=9)
+
+        y = 190
+        for bullet in slide.bullets[:3]:
+            draw.ellipse((65, y + 10, 76, y + 21), fill="#0d746d")
+            consumed = _draw_wrapped_text(
+                draw,
+                bullet,
+                (96, y),
+                bullet_font,
+                "#1f2937",
+                34,
+                3,
+                line_gap=8,
+            )
+            y += consumed + 28
+
+        visual_box = (720, 118, 1228, 575)
+        draw.rounded_rectangle((710, 108, 1238, 585), radius=8, fill="#e5e7eb")
+        draw.rounded_rectangle(visual_box, radius=8, fill="#ffffff", outline="#d1d5db", width=2)
+
+        if slide.visual_path and Path(slide.visual_path).exists():
+            try:
+                visual = Image.open(slide.visual_path).convert("RGB")
+                visual.thumbnail((visual_box[2] - visual_box[0] - 34, visual_box[3] - visual_box[1] - 34))
+                paste_x = visual_box[0] + ((visual_box[2] - visual_box[0]) - visual.width) // 2
+                paste_y = visual_box[1] + ((visual_box[3] - visual_box[1]) - visual.height) // 2
+                image.paste(visual, (paste_x, paste_y))
+            except OSError:
+                _draw_placeholder_visual(draw, visual_box, small_font)
+        else:
+            _draw_placeholder_visual(draw, visual_box, small_font)
+
+        if slide.visual_caption:
+            _draw_wrapped_text(
+                draw,
+                slide.visual_caption,
+                (725, 604),
+                caption_font,
+                "#64748b",
+                58,
+                2,
+                line_gap=4,
+            )
+
+        footer = f"Slide {index} of {len(slides)}  |  {slide.duration_seconds}s"
+        draw.text((60, SLIDE_HEIGHT - 48), footer, fill="#64748b", font=small_font)
+
+        frame_path = frames_dir / f"slide_{index:02d}.png"
+        image.save(frame_path)
+        frame_paths.append(frame_path)
+
+    return frame_paths
+
+
+def _draw_placeholder_visual(draw, visual_box: tuple[int, int, int, int], font) -> None:
+    x1, y1, x2, y2 = visual_box
+    draw.line((x1 + 70, y2 - 90, x1 + 180, y1 + 185, x1 + 290, y2 - 145, x2 - 70, y1 + 130), fill="#0d746d", width=5)
+    draw.rectangle((x1 + 70, y1 + 110, x2 - 70, y2 - 70), outline="#94a3b8", width=3)
+    draw.text((x1 + 135, y2 - 58), "Visual generated from paper structure", fill="#64748b", font=font)
+
+
+def _draw_wrapped_text(
+    draw,
+    text: str,
+    position: tuple[int, int],
+    font,
+    fill: str,
+    wrap_width: int,
+    max_lines: int,
+    *,
+    line_gap: int,
+) -> int:
+    x, y = position
+    line_height = _font_height(font) + line_gap
+    lines = wrap(text, width=wrap_width)[:max_lines]
+    for line in lines:
+        draw.text((x, y), line, fill=fill, font=font)
+        y += line_height
+    return max(1, len(lines)) * line_height
+
+
+def _write_script(script: list[TimestampedScriptLine], script_path: Path) -> None:
+    lines = []
+    for line in script:
+        lines.append(
+            f"[{_format_short_timestamp(line.start_seconds)} - "
+            f"{_format_short_timestamp(line.end_seconds)}] "
+            f"{line.slide_title}: {line.narration}"
+        )
+    script_path.write_text("\n\n".join(lines), encoding="utf-8")
+
+
+def _write_script_json(script: list[TimestampedScriptLine], script_json_path: Path) -> None:
+    script_json_path.write_text(
+        json.dumps([asdict(line) for line in script], indent=2),
+        encoding="utf-8",
+    )
+
+
+def _write_vtt(script: list[TimestampedScriptLine], subtitle_vtt_path: Path) -> None:
+    blocks = ["WEBVTT"]
+    for line in script:
+        blocks.append(
+            "\n".join(
+                [
+                    f"{_format_vtt_timestamp(line.start_seconds)} --> {_format_vtt_timestamp(line.end_seconds)}",
+                    line.subtitle,
+                ]
+            )
+        )
+    subtitle_vtt_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
+
+
+def _write_srt(script: list[TimestampedScriptLine], subtitle_srt_path: Path) -> None:
+    blocks = []
+    for index, line in enumerate(script, start=1):
+        blocks.append(
+            "\n".join(
+                [
+                    str(index),
+                    f"{_format_srt_timestamp(line.start_seconds)} --> {_format_srt_timestamp(line.end_seconds)}",
+                    line.subtitle,
+                ]
+            )
+        )
+    subtitle_srt_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
+
+
+def _write_asset_metadata(image_assets: list, asset_metadata_path: Path) -> None:
+    asset_metadata_path.write_text(
+        json.dumps([asdict(asset) for asset in image_assets], indent=2),
+        encoding="utf-8",
+    )
+
+
+def _render_video(
+    slide_image_paths: list[Path],
+    slides: list[VideoSlide],
+    video_path: Path,
+) -> None:
+    try:
+        import imageio.v2 as imageio
+    except ImportError as exc:
+        raise VideoSummaryError("imageio is not installed.") from exc
+
+    with imageio.get_writer(video_path, fps=VIDEO_FPS, codec="libx264") as writer:
+        for image_path, slide in zip(slide_image_paths, slides):
+            frame = imageio.imread(image_path)
+            for _ in range(max(1, slide.duration_seconds * VIDEO_FPS)):
+                writer.append_data(frame)
+
+
+def _mux_video_audio(
+    video_path: Path,
+    audio_path: Path,
+    output_path: Path,
+) -> None:
+    try:
+        import imageio_ffmpeg
+    except ImportError as exc:
+        raise VideoSummaryError("imageio-ffmpeg is not installed.") from exc
+
+    command = [
+        imageio_ffmpeg.get_ffmpeg_exe(),
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        str(output_path),
+    ]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise VideoSummaryError("Adding voiceover audio to the video failed.") from exc
+
+
+def _estimate_duration(narration: str, minimum_seconds: int) -> int:
+    word_count = len(narration.split())
+    return min(max(minimum_seconds, round(word_count / 2.4)), 24)
+
+
+def _coerce_duration(value, default_seconds: int) -> int:
+    try:
+        return _clamp_duration(int(value))
+    except (TypeError, ValueError):
+        return default_seconds
+
+
+def _clamp_duration(seconds: int) -> int:
+    return min(max(seconds, 5), 20)
+
+
+def _coerce_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_short_timestamp(seconds: int) -> str:
+    minutes, remaining_seconds = divmod(seconds, 60)
+    return f"{minutes:02d}:{remaining_seconds:02d}"
+
+
+def _format_vtt_timestamp(seconds: int) -> str:
+    hours, remainder = divmod(seconds, 3600)
+    minutes, remaining_seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}.000"
+
+
+def _format_srt_timestamp(seconds: int) -> str:
+    hours, remainder = divmod(seconds, 3600)
+    minutes, remaining_seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d},000"
+
+
+def _clean_bullets(value) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    bullets = []
+    for bullet in value[:3]:
+        clean_bullet = _clean_text(bullet, limit=105)
+        if clean_bullet:
+            bullets.append(clean_bullet)
+    return bullets
+
+
+def _clean_text(value, limit: int) -> str:
+    if value is None:
+        return ""
+    clean_text = " ".join(str(value).split())
+    if len(clean_text) <= limit:
+        return clean_text
+    return clean_text[: limit - 3].rstrip() + "..."
+
+
+def _short_caption(text: str, *, limit: int = 220) -> str:
+    first_sentence = re.split(r"(?<=[.!?])\s+", text.strip())[0]
+    return _clean_text(first_sentence, limit=limit)
+
+
+def _load_font(image_font_module, size: int):
+    for font_name in ("Arial.ttf", "Helvetica.ttc", "DejaVuSans.ttf"):
+        try:
+            return image_font_module.truetype(font_name, size)
+        except OSError:
+            continue
+    return image_font_module.load_default()
+
+
+def _font_height(font) -> int:
+    try:
+        return int(font.getbbox("Ag")[3] - font.getbbox("Ag")[1])
+    except AttributeError:
+        return int(font.getsize("Ag")[1])
