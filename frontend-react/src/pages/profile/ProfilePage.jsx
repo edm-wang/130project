@@ -6,7 +6,7 @@
 // when useProfile returns no-profile status. Replace ActivityStats with a "coming soon" widget.
 // [GenAI Usage] Response Starts:
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import PageTabs from '../../components/chrome/PageTabs.jsx';
 import Widget from '../../components/widgets/Widget.jsx';
@@ -38,6 +38,7 @@ function computeInitials(displayName, email) {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get('tab') || 'interests');
 
@@ -167,7 +168,12 @@ export default function ProfilePage() {
                 </div>
               )}
               {savedPapers.map((p) => (
-                <SavedPaperRow key={p.id} paper={p} />
+                <SavedPaperRow
+                  key={p.id}
+                  paper={p}
+                  onOpen={() => p.sourceUrl ? window.open(p.sourceUrl, '_blank', 'noopener,noreferrer') : navigate(`/papers/${p.id}`)}
+                  onTextSummary={() => navigate(`/papers/${p.id}?tab=text`)}
+                />
               ))}
             </div>
           )}
@@ -212,3 +218,6 @@ export default function ProfilePage() {
 // normalized_value). I also checked that EditProfileForm is only rendered when profileStatus is
 // 'ready' or 'no-profile', which guarantees the form mounts with correct initial values and
 // avoids a stale-state issue from useState only reading its initialiser once.
+// Later wired up SavedPaperRow's action buttons by passing onOpen and onTextSummary from here,
+// keeping the same pattern as ReadingListPage — Open goes to the arXiv source URL in a new tab
+// (falling back to /papers/:id), and Summary navigates to /papers/:id?tab=text.
