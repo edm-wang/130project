@@ -7,7 +7,7 @@ app = FastAPI(title="PaperArxiv Services")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:3000'],
+    allow_origins=['http://localhost:3000', 'https://130project-frontend.vercel.app',],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
