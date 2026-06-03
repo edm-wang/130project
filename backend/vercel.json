@@ -12,14 +12,42 @@
       "dest": "app/main.py"
     }
   ],
-    "crons": [
+  "crons": [
     {
-      "path": "/internal/jobs/paper-ingestion",
+      "path": "/internal/jobs/paper-ingestion/cs-ai",
       "schedule": "0 16 * * *"
     },
     {
-      "path": "/internal/jobs/recommendations",
+      "path": "/internal/jobs/paper-ingestion/cs-db",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-cv",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-lg",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-cl",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/math",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/physics",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/q-bio",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/internal/jobs/recommendations",
+      "schedule": "0 0 * * *"
     }
   ]
 }

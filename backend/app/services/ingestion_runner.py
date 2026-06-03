@@ -28,6 +28,147 @@ from app.services.paper_ingestion import (
 
 SUPABASE_ENV_PATH = Path(__file__).resolve().parents[1] / "supabase" / ".env"
 
+# Don't delete comments below
+# [GenAI Usage] Codex Prompt:
+# Right now, the cron job defined in paper ingestion only run for one domain: CS.AI. I want to expand its scope to multi domain: physics, cs.db, cs.cv, math, life science etc. each with limit 500?
+# too much. i'm afraid it will throttle. maybe several cron job each with a domain run at different time -- each with an hour difference?
+# [GenAI Usage] Response begins:
+DEFAULT_CRON_MAX_RESULTS = 500
+DEFAULT_CRON_DOMAIN_CATEGORY_GROUPS: dict[str, tuple[str, ...]] = {
+    "cs_ai": ("cs.AI",),
+    "cs_db": ("cs.DB",),
+    "cs_cv": ("cs.CV",),
+    "cs_lg": ("cs.LG",),
+    "cs_cl": ("cs.CL",),
+    "math": (
+        "math.AG",
+        "math.AT",
+        "math.AP",
+        "math.CT",
+        "math.CA",
+        "math.CO",
+        "math.AC",
+        "math.CV",
+        "math.DG",
+        "math.DS",
+        "math.FA",
+        "math.GM",
+        "math.GN",
+        "math.GT",
+        "math.GR",
+        "math.HO",
+        "math.IT",
+        "math.KT",
+        "math.LO",
+        "math.MG",
+        "math.NA",
+        "math.NT",
+        "math.OA",
+        "math.OC",
+        "math.PR",
+        "math.QA",
+        "math.RA",
+        "math.RT",
+        "math.SG",
+        "math.SP",
+        "math.ST",
+    ),
+    "physics": (
+        "astro-ph.CO",
+        "astro-ph.EP",
+        "astro-ph.GA",
+        "astro-ph.HE",
+        "astro-ph.IM",
+        "astro-ph.SR",
+        "cond-mat.dis-nn",
+        "cond-mat.mes-hall",
+        "cond-mat.mtrl-sci",
+        "cond-mat.other",
+        "cond-mat.quant-gas",
+        "cond-mat.soft",
+        "cond-mat.stat-mech",
+        "cond-mat.str-el",
+        "cond-mat.supr-con",
+        "gr-qc",
+        "hep-ex",
+        "hep-lat",
+        "hep-ph",
+        "hep-th",
+        "math-ph",
+        "nlin.AO",
+        "nlin.CD",
+        "nlin.CG",
+        "nlin.PS",
+        "nlin.SI",
+        "nucl-ex",
+        "nucl-th",
+        "physics.acc-ph",
+        "physics.app-ph",
+        "physics.ao-ph",
+        "physics.atom-ph",
+        "physics.atm-clus",
+        "physics.bio-ph",
+        "physics.chem-ph",
+        "physics.class-ph",
+        "physics.comp-ph",
+        "physics.data-an",
+        "physics.ed-ph",
+        "physics.flu-dyn",
+        "physics.gen-ph",
+        "physics.geo-ph",
+        "physics.hist-ph",
+        "physics.ins-det",
+        "physics.med-ph",
+        "physics.optics",
+        "physics.plasm-ph",
+        "physics.pop-ph",
+        "physics.soc-ph",
+        "physics.space-ph",
+        "quant-ph",
+    ),
+    "q_bio": (
+        "q-bio.BM",
+        "q-bio.CB",
+        "q-bio.GN",
+        "q-bio.MN",
+        "q-bio.NC",
+        "q-bio.OT",
+        "q-bio.PE",
+        "q-bio.QM",
+        "q-bio.SC",
+        "q-bio.TO",
+    ),
+}
+DEFAULT_CRON_DOMAIN_ALIASES = {
+    "cs-ai": "cs_ai",
+    "cs.ai": "cs_ai",
+    "cs_ai": "cs_ai",
+    "cs-db": "cs_db",
+    "cs.db": "cs_db",
+    "cs_db": "cs_db",
+    "cs-cv": "cs_cv",
+    "cs.cv": "cs_cv",
+    "cs_cv": "cs_cv",
+    "cs-lg": "cs_lg",
+    "cs.lg": "cs_lg",
+    "cs_lg": "cs_lg",
+    "cs-cl": "cs_cl",
+    "cs.cl": "cs_cl",
+    "cs_cl": "cs_cl",
+    "math": "math",
+    "physics": "physics",
+    "life-science": "q_bio",
+    "life_science": "q_bio",
+    "q-bio": "q_bio",
+    "q.bio": "q_bio",
+    "q_bio": "q_bio",
+}
+# Don't delete comments below
+# [GenAI Usage] Response ends
+# [GenAI Usage] Reflection:
+# I prompted Codex with clear instructions so that it comes up with a list of usable domains.
+# I verified the validity of these domains myself in https://arxiv.org/category_taxonomy, where all domain names are documented. The implementation right now will cover all CS domains, and key domains in other areas as well, which is intended in the design doc.
+
 
 def load_supabase_env() -> None:
     load_dotenv(SUPABASE_ENV_PATH)
@@ -121,7 +262,7 @@ def run_paper_ingestion_cron(
         *,
         target_date: date | None = None,
         categories: Iterable[str] | None = None,
-        max_results: int = 1000,
+        max_results: int = DEFAULT_CRON_MAX_RESULTS,
     ) -> dict[str, Any]:
     from app.supabase.db import get_or_create_service_supabase_client
 
@@ -232,6 +373,38 @@ def run_paper_ingestion_cron(
         )
 
         raise
+
+
+# [GenAI Usage] Codex Prompt:
+# Right now, the cron job defined in paper ingestion only run for one domain: CS.AI. I want to expand its scope to multi domain: physics, cs.db, cs.cv, math, life science etc. each with limit 500?
+# too much. i'm afraid it will throttle. maybe several cron job each with a domain run at different time -- each with an hour difference?
+# [GenAI Usage] Response begins:
+def run_domain_paper_ingestion_cron(
+        domain: str,
+        *,
+        target_date: date | None = None,
+        max_results: int = DEFAULT_CRON_MAX_RESULTS,
+    ) -> dict[str, Any]:
+    normalized_domain = DEFAULT_CRON_DOMAIN_ALIASES.get(domain.strip().lower())
+    if normalized_domain is None:
+        valid_domains = ", ".join(sorted(DEFAULT_CRON_DOMAIN_CATEGORY_GROUPS))
+        raise ValueError(f"unknown paper ingestion domain: {domain}. Valid domains: {valid_domains}")
+
+    categories = DEFAULT_CRON_DOMAIN_CATEGORY_GROUPS[normalized_domain]
+    result = run_paper_ingestion_cron(
+        target_date=target_date,
+        categories=categories,
+        max_results=max_results,
+    )
+
+    return {
+        "domain": normalized_domain,
+        "categories": list(categories),
+        **result,
+    }
+# [GenAI Usage] Response ends
+# [GenAI Usage] Reflection:
+# This wrapper prevents scheduled ingestion from fanning out across all domains in one request.
 
 #End human-written code
 
