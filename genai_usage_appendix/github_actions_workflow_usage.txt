@@ -1,0 +1,13 @@
+[GenAI Usage] Codex prompt:
+can you use github actions to do 2 things: 1. when a commit is pushed to remote in a branch, automatically create a PR for this. 2. when main is updated, its forked repo's main shall be sync automatically
+
+[GenAI Usage] Codex response:
+Creates 2 files:
+1. .github/workflows/auto-pr.yml
+2. .github/workflows/sync-downstream-main.yml
+
+
+[GenAI Usage] Reflection:
+I inspected two yaml files carefully and realized that Codex helped resolved two tasks cleanly. 
+Auto-PR one seems clean and straight-forward.
+Sync downstream might need some human tuning, because it requires a special token. However, at this time, I think it is okay to push it to remote. Because it is impossible to test this locally. If this github action fails, no severe result will be hurt to the develop and hosted website (as it is hosted by a downstream fork).

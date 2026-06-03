@@ -1,0 +1,69 @@
+name: Auto PR for pushed branches
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pr:
+    name: Create PR to main
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create pull request if one does not exist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = 'main';
+            const branch = context.ref.replace('refs/heads/', '');
+
+            const { data: existingPrs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              head: `${owner}:${branch}`,
+              base,
+              per_page: 1,
+            });
+
+            if (existingPrs.length > 0) {
+              core.notice(`Open PR already exists: ${existingPrs[0].html_url}`);
+              return;
+            }
+
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `${base}...${branch}`,
+            });
+
+            if (comparison.ahead_by === 0) {
+              core.notice(`${branch} has no commits ahead of ${base}; skipping PR creation.`);
+              return;
+            }
+
+            const title = context.payload.head_commit?.message?.split('\n')[0] ||
+              `Merge ${branch} into ${base}`;
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner,
+              repo,
+              base,
+              head: branch,
+              title,
+              body: [
+                `Automated pull request for \`${branch}\`.`,
+                '',
+                `Created after commit ${context.sha} was pushed.`,
+              ].join('\n'),
+            });
+
+            core.notice(`Created PR: ${pr.html_url}`);
