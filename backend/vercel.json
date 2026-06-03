@@ -34,20 +34,36 @@
       "schedule": "0 20 * * *"
     },
     {
-      "path": "/internal/jobs/paper-ingestion/math",
+      "path": "/internal/jobs/paper-ingestion/econ",
       "schedule": "0 21 * * *"
     },
     {
-      "path": "/internal/jobs/paper-ingestion/physics",
+      "path": "/internal/jobs/paper-ingestion/eess",
       "schedule": "0 22 * * *"
     },
     {
-      "path": "/internal/jobs/paper-ingestion/q-bio",
+      "path": "/internal/jobs/paper-ingestion/math",
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/internal/jobs/recommendations",
+      "path": "/internal/jobs/paper-ingestion/physics",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/q-bio",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/q-fin",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/stat",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/internal/jobs/recommendations",
+      "schedule": "0 4 * * *"
     }
   ]
 }
