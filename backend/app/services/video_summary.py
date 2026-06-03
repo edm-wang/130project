@@ -3,12 +3,19 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 import json
+import mimetypes
+import os
 import re
 import subprocess
 from textwrap import wrap
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 
-DEFAULT_OUTPUT_ROOT = Path("generated/video_summaries")
+DEFAULT_STORAGE_BUCKET = "video-summaries"
+DEFAULT_SCRATCH_ROOT = Path(os.getenv("VIDEO_SUMMARY_SCRATCH_ROOT", "/tmp/generated"))
+DEFAULT_OUTPUT_ROOT = DEFAULT_SCRATCH_ROOT / "video_summaries"
 SLIDE_WIDTH = 1280
 SLIDE_HEIGHT = 720
 VIDEO_FPS = 2
@@ -17,6 +24,11 @@ MAX_VIDEO_SLIDES = 8
 
 #[GenAI Usage] Prompt: implement the video summary functionality. Make it similar to text summary, but instead use a python package that directly creates presentation slides, . Write the script with timestamps. Then play the slides with the timestamps and render a video.
 #[GenAI Usage] LLM response begins
+
+#[GenAI Usage] Codex prompt: Why frontend got that error when i click on generate video summary.
+# [Detailed error info: OSError: [Errno 30] Read-only file system: 'generated' on Vercel].
+# How to fix the current video generation pipeline on vercel deployment server.
+#[GenAI Usage] Codex response begins:
 
 class VideoSummaryError(Exception):
     pass
@@ -141,25 +153,232 @@ def create_video_summary_artifacts(
             video_path,
         )
 
+    static_root = output_root.parent
+    storage_urls = _upload_artifacts_to_storage(
+        _collect_artifact_paths(
+            pptx_path=pptx_path,
+            video_path=video_path,
+            silent_video_path=silent_video_path,
+            voiceover=voiceover,
+            script_path=script_path,
+            script_json_path=script_json_path,
+            subtitle_vtt_path=subtitle_vtt_path,
+            subtitle_srt_path=subtitle_srt_path,
+            asset_metadata_path=asset_metadata_path,
+            slide_image_paths=slide_image_paths,
+            visual_assets=visual_assets,
+        ),
+        static_root=static_root,
+    )
+
+    video_url = _artifact_url(video_path, static_root, storage_urls)
+    # parental path
+    out_dir = video_url.rsplit("/", 1)[0] + "/"
     return VideoSummaryArtifact(
-        output_dir=str(output_dir),
-        pptx_path=str(pptx_path),
-        video_path=str(video_path),
-        silent_video_path=str(silent_video_path) if silent_video_path else None,
-        audio_path=voiceover.combined_audio_path if voiceover else None,
-        script_path=str(script_path),
-        script_json_path=str(script_json_path),
-        subtitle_vtt_path=str(subtitle_vtt_path),
-        subtitle_srt_path=str(subtitle_srt_path),
-        asset_metadata_path=str(asset_metadata_path),
-        slide_image_paths=[str(path) for path in slide_image_paths],
-        visual_asset_paths=[asset.path for asset in visual_assets],
-        slides=[asdict(slide) for slide in slides],
+        output_dir=out_dir,
+        pptx_path=_artifact_url(pptx_path, static_root, storage_urls),
+        video_path=video_url,
+        silent_video_path=(
+            _artifact_url(silent_video_path, static_root, storage_urls)
+            if silent_video_path
+            else None
+        ),
+        audio_path=(
+            _artifact_url(Path(voiceover.combined_audio_path), static_root, storage_urls)
+            if voiceover
+            else None
+        ),
+        script_path=_artifact_url(script_path, static_root, storage_urls),
+        script_json_path=_artifact_url(script_json_path, static_root, storage_urls),
+        subtitle_vtt_path=_artifact_url(subtitle_vtt_path, static_root, storage_urls),
+        subtitle_srt_path=_artifact_url(subtitle_srt_path, static_root, storage_urls),
+        asset_metadata_path=_artifact_url(asset_metadata_path, static_root, storage_urls),
+        slide_image_paths=[
+            _artifact_url(path, static_root, storage_urls)
+            for path in slide_image_paths
+        ],
+        visual_asset_paths=[
+            _artifact_url(Path(asset.path), static_root, storage_urls)
+            for asset in visual_assets
+        ],
+        slides=[
+            _public_slide_dict(slide, static_root, storage_urls)
+            for slide in slides
+        ],
         script=[asdict(line) for line in script],
-        voiceover=voiceover.to_dict() if voiceover else None,
+        voiceover=_public_voiceover_dict(voiceover, static_root, storage_urls) if voiceover else None,
     )
 
 
+def _artifact_url(path: Path, static_root: Path, storage_urls: dict[Path, str]) -> str:
+    storage_url = storage_urls.get(path)
+    if storage_url:
+        return storage_url
+    raise VideoSummaryError(f"Generated artifact was not uploaded to durable storage: {path.name}")
+
+
+def _public_slide_dict(
+    slide: VideoSlide,
+    static_root: Path,
+    storage_urls: dict[Path, str],
+) -> dict:
+    data = asdict(slide)
+    if slide.visual_path:
+        data["visual_path"] = _artifact_url(Path(slide.visual_path), static_root, storage_urls)
+    return data
+
+
+def _public_voiceover_dict(voiceover, static_root: Path, storage_urls: dict[Path, str]) -> dict:
+    data = voiceover.to_dict()
+    data["combined_audio_path"] = _artifact_url(
+        Path(voiceover.combined_audio_path),
+        static_root,
+        storage_urls,
+    )
+    for segment in data.get("segments", []):
+        if segment.get("audio_path"):
+            segment["audio_path"] = _artifact_url(
+                Path(segment["audio_path"]),
+                static_root,
+                storage_urls,
+            )
+    return data
+
+
+def _collect_artifact_paths(
+    *,
+    pptx_path: Path,
+    video_path: Path,
+    silent_video_path: Path | None,
+    voiceover,
+    script_path: Path,
+    script_json_path: Path,
+    subtitle_vtt_path: Path,
+    subtitle_srt_path: Path,
+    asset_metadata_path: Path,
+    slide_image_paths: list[Path],
+    visual_assets: list,
+) -> list[Path]:
+    paths = [
+        pptx_path,
+        video_path,
+        script_path,
+        script_json_path,
+        subtitle_vtt_path,
+        subtitle_srt_path,
+        asset_metadata_path,
+        *slide_image_paths,
+        *[Path(asset.path) for asset in visual_assets],
+    ]
+    if silent_video_path:
+        paths.append(silent_video_path)
+    if voiceover:
+        paths.append(Path(voiceover.combined_audio_path))
+        paths.extend(Path(segment.audio_path) for segment in voiceover.segments)
+
+    seen = set()
+    unique_paths = []
+    for path in paths:
+        if path in seen or not path.exists() or not path.is_file():
+            continue
+        seen.add(path)
+        unique_paths.append(path)
+    return unique_paths
+
+
+def _upload_artifacts_to_storage(paths: list[Path], *, static_root: Path) -> dict[Path, str]:
+    supabase_url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    bucket = os.getenv("VIDEO_SUMMARY_STORAGE_BUCKET", DEFAULT_STORAGE_BUCKET)
+
+    if not supabase_url or not service_key:
+        raise VideoSummaryError(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to persist video summaries."
+        )
+
+    uploaded_urls: dict[Path, str] = {}
+    for path in paths:
+        object_path = _storage_object_path(path, static_root)
+        _upload_file_to_storage(
+            supabase_url=supabase_url,
+            service_key=service_key,
+            bucket=bucket,
+            object_path=object_path,
+            file_path=path,
+        )
+        uploaded_urls[path] = _storage_public_url(supabase_url, bucket, object_path)
+    return uploaded_urls
+
+
+def _storage_object_path(path: Path, static_root: Path) -> str:
+    try:
+        return path.relative_to(static_root).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _upload_file_to_storage(
+    *,
+    supabase_url: str,
+    service_key: str,
+    bucket: str,
+    object_path: str,
+    file_path: Path,
+) -> None:
+    content_type = _content_type_for_file(file_path)
+    url = (
+        f"{supabase_url}/storage/v1/object/"
+        f"{quote(bucket, safe='')}/{quote(object_path, safe='/')}"
+    )
+    request = Request(
+        url,
+        data=file_path.read_bytes(),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+            "Content-Type": content_type,
+            "Cache-Control": "3600",
+            "x-upsert": "true",
+        },
+    )
+    try:
+        with urlopen(request, timeout=60) as response:
+            response.read()
+    except HTTPError as exc:
+        body = exc.read(500).decode("utf-8", errors="replace")
+        raise VideoSummaryError(
+            f"Supabase Storage upload failed for {object_path} with HTTP {exc.code}: {body}"
+        ) from exc
+    except (TimeoutError, URLError, OSError) as exc:
+        raise VideoSummaryError(
+            f"Supabase Storage upload failed for {object_path}."
+        ) from exc
+
+
+def _storage_public_url(supabase_url: str, bucket: str, object_path: str) -> str:
+    return (
+        f"{supabase_url}/storage/v1/object/public/"
+        f"{quote(bucket, safe='')}/{quote(object_path, safe='/')}"
+    )
+
+
+def _content_type_for_file(file_path: Path) -> str:
+    suffix = file_path.suffix.lower()
+    if suffix == ".vtt":
+        return "text/vtt"
+    if suffix == ".srt":
+        return "application/x-subrip"
+    return mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+
+# Don't delete or modify this comment
+# [GenAI Usage] Reflection:
+# When I test this feature on deployed Vercel server, I got an internal server error 500, because the deployed FastAPI route crashed due to OS exception. 
+# The cause is that the legacy generation pipeline need to create new files in ./generated/video_summaries folder, which is read-only.
+# The fix is to treat local files as scratch artifacts only: render under /tmp on Vercel, upload the final video/PPTX/scripts/subtitles/images/audio to durable Supabase file system.
+# Alongside changes in this file, Codex will create a robust migration sql to define and create a new storage bucket to persist video summary.
+# Finally, return the storage url to frontend for rendering
+# The code shall be accepted right now, although there might be pending consistency issue. However, it suffices to be a good starting point. We will fix the upcoming issue later when encountered. We would imagine and endure some failures in production, because it is a beta-feature.
 def _slides_from_plan(
     *,
     title: str,
