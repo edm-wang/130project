@@ -26,6 +26,13 @@ class DecayConfig:
     floor: DecayModificationConfig = field(default_factory=DecayModificationConfig)
     plateau: DecayModificationConfig = field(default_factory=DecayModificationConfig)
 
+DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS = {
+    "topic": 1.0,
+    "field": 1.0,
+    "keyword": 1.0,
+    "author": 1.5
+}
+
 #[GenAI Usage] Prompt: the code below is the result of a series of conversations with Codex. The specific conversation can be found in
 # genai_usage_appendix\recommendation_runner_setup.md. The overall content of the conversation involves me proposing a detailed
 # core recommendation algorithm with clearly defined steps and parameters required in each step, and then I asked codex to generate
@@ -78,8 +85,8 @@ class RecGenParams:
     downvote_top_k: int = 10
     interest_weight: float = 1.0
     saved_paper_weight: float = 0.2
-    upvote_weight: float = 0.4
-    downvote_weight: float = 0.4
+    upvote_weight: float = 0.6
+    downvote_weight: float = 0.6
     freshness_weight: float = 0.1
     downvote_penalty_cap: float = 1.0
     downvote_similarity_threshold: float = 0.65
@@ -154,6 +161,7 @@ class RecGenParams:
 # core recommendation algorithm, and the execution of the core recommendation algorithm. In addition, I have carefully examined the code to
 # ensure it is correct and had detailed subsequent conversation with Codex to modify specific segments of the code that deviated from my
 # specification or introduced unnecessary complexity or code bloating.
+
 
 
 def _clamp_unit_interval(val: float) -> float:
