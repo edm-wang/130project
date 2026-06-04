@@ -15,6 +15,8 @@ from app.services.recommendation import (
     RecGenParams,
     UserPaperSignal,
     generate_recommendations,
+    _normalize_author_name,
+    _paper_has_author,
 )
 
 #[GenAI Usage] Prompt: the code below is the result of a series of conversations with Codex. The specific conversation can be found in
@@ -83,10 +85,10 @@ def generate_recommendations_for_user(
         )
 
         recommendation_items =  _fetch_batch_recommendations(client, batch["id"])
-        # with open("./recommendation_endpoint_logs.jsonl", "w") as f:
-        #     for idx, item in enumerate(recommendation_items):
-        #         f.write(json.dumps(item, indent=4))
-        #         f.write("\n")
+        with open("./recommendation_endpoint_logs.jsonl", "w") as f:
+            for idx, item in enumerate(recommendation_items):
+                f.write(json.dumps(item, indent=4))
+                f.write("\n")
 
         return completed_batch, recommendation_items
     except Exception as exc:
@@ -293,6 +295,9 @@ def _match_paper_embeddings(
     interest: InterestEmbedding,
     params: RecGenParams,
 ) -> list[dict]:
+    if interest.interest_type == "author":
+        return _match_author_papers(client, interest, params)
+
     response = (
         client.rpc(
             "match_paper_embeddings",
@@ -323,6 +328,51 @@ def _match_paper_embeddings(
                 "embedding_model": embedding_row.get("embedding_model"),
                 "embedded_text": embedding_row.get("embedded_text"),
                 "paper": papers_by_id.get(paper_id, {}),
+            }
+        )
+
+    return rows
+
+
+def _match_author_papers(
+    client: Client,
+    interest: InterestEmbedding,
+    params: RecGenParams,
+) -> list[dict]:
+    author_name = _normalize_author_name(interest.value)
+    if not author_name:
+        return []
+
+    response = (
+        client.table("papers")
+        .select("*")
+        .ilike("authors_text", f"%{author_name}%")
+        .limit(params.retrieval_top_n)
+        .execute()
+    )
+    papers = [
+        paper
+        for paper in response.data or []
+        if _paper_has_author(paper, interest.value)
+    ]
+    paper_ids = [str(paper["id"]) for paper in papers if paper.get("id")]
+    embeddings_by_id = _fetch_embeddings_by_paper_id(client, paper_ids)
+
+    rows = []
+    for paper in papers:
+        paper_id = str(paper.get("id") or "")
+        embedding_row = embeddings_by_id.get(paper_id)
+        if not paper_id or embedding_row is None:
+            continue
+
+        rows.append(
+            {
+                "paper_id": paper_id,
+                "similarity": 1.0,
+                "embedding": embedding_row.get("embedding"),
+                "embedding_model": embedding_row.get("embedding_model"),
+                "embedded_text": embedding_row.get("embedded_text"),
+                "paper": paper,
             }
         )
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from math import sqrt
+import re
 from typing import Any, Literal, Optional
 
 from app.services.embedding_config import (
@@ -30,7 +31,7 @@ DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS = {
     "topic": 1.0,
     "field": 1.0,
     "keyword": 1.0,
-    "author": 1.5
+    "author": 1.0,
 }
 
 #[GenAI Usage] Prompt: the code below is the result of a series of conversations with Codex. The specific conversation can be found in
@@ -74,7 +75,7 @@ class UserPaperSignal:
 
 @dataclass
 class RecGenParams:
-    algorithm_version: str = "multi_vector_v1"
+    algorithm_version: str = "multi_vector_v2"
     embedding_model: str = DEFAULT_EMBEDDING_MODEL
     embedding_dimensions: int = DEFAULT_EMBEDDING_DIMENSIONS
     retrieval_top_n: int = 200
@@ -249,6 +250,26 @@ def _similarity(
     cosine_similarity = dot_product / (norm_a * norm_b)
     return _clamp_unit_interval((1 + cosine_similarity) / 2)
 
+
+def _normalize_author_name(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
+def _paper_has_author(paper: dict[str, Any], author_name: str) -> bool:
+    normalized_author_name = _normalize_author_name(author_name)
+    if not normalized_author_name:
+        return False
+
+    authors_text = str(paper.get("authors_text") or "")
+    normalized_paper_authors = set()
+    for author in authors_text.split(","):
+        normalized_paper_author = _normalize_author_name(author)
+        if normalized_paper_author:
+            normalized_paper_authors.add(normalized_paper_author)
+
+    return normalized_author_name in normalized_paper_authors
+
+
 def _interest_score(
         paper: CandidatePaper,
         params: RecGenParams
@@ -272,11 +293,16 @@ def _interest_score(
 
     interest_id_to_similarities = {}
     for interest in params.interests:
-        similarity = _similarity(paper.embedding, interest.embedding)
-        if similarity == 0.0 and interest.interest_id in paper.interest_similarities:
-            similarity = _clamp_unit_interval(
-                float(paper.interest_similarities[interest.interest_id])
+        if interest.interest_type == "author":
+            similarity = (
+                1.0 if _paper_has_author(paper.paper, interest.value) else 0.0
             )
+        else:
+            similarity = _similarity(paper.embedding, interest.embedding)
+            if similarity == 0.0 and interest.interest_id in paper.interest_similarities:
+                similarity = _clamp_unit_interval(
+                    float(paper.interest_similarities[interest.interest_id])
+                )
 
         interest_id_to_similarities[interest.interest_id] = _clamp_unit_interval(
             float(similarity)
