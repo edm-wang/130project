@@ -11,13 +11,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import Widget from '../../components/widgets/Widget.jsx';
-import { fetchPaper, fetchPaperSummary, generatePaperSummary } from '../../lib/api.js';
+import { fetchPaper, fetchPaperSummary, generatePaperSummary, generateVideoSummary } from '../../lib/api.js';
 import useFeedback from '../feed/useFeedback.js';
 import useSavedPapers from '../reading-list/useSavedPapers.js';
 import PaperHeader from './PaperHeader.jsx';
 import { ShareCard } from './SidebarCards.jsx';
 import SummaryTabs from './SummaryTabs.jsx';
 import TextSummary from './TextSummary.jsx';
+import VideoSummary from './VideoSummary.jsx';
 import styles from './PaperDetailPage.module.css';
 
 export default function PaperDetailPage() {
@@ -32,6 +33,16 @@ export default function PaperDetailPage() {
   const [summary, setSummary] = useState(null);
   // idle | loading | ready | not-found | error
   const [summaryStatus, setSummaryStatus] = useState('idle');
+
+  // [GenAI Usage 2] Prompt: Add a video summary tab to PaperDetailPage. State machine:
+  // idle → loading → ready | error. Try POST /papers/:id/video-summary with
+  // include_voiceover: true first; if it fails, retry with false and show a warning
+  // banner above the VideoSummary component. Mirror the text summary state/handler pattern.
+  // [GenAI Usage 2] Response begins:
+  const [video, setVideo] = useState(null);
+  // idle | loading | ready | error
+  const [videoStatus, setVideoStatus] = useState('idle');
+  const [videoWarning, setVideoWarning] = useState(null);
 
   const { voteByPaperId } = useFeedback();
   const { savedPapers } = useSavedPapers();
@@ -91,6 +102,26 @@ export default function PaperDetailPage() {
       setSummaryStatus('ready');
     } catch {
       setSummaryStatus('error');
+    }
+  }
+
+  async function handleGenerateVideo() {
+    setVideoStatus('loading');
+    setVideoWarning(null);
+    try {
+      const data = await generateVideoSummary(id, true);
+      setVideo(data.video_summary);
+      setVideoStatus('ready');
+    } catch {
+      // Voiceover likely not configured — warn and retry without it
+      try {
+        const data = await generateVideoSummary(id, false);
+        setVideo(data.video_summary);
+        setVideoStatus('ready');
+        setVideoWarning('Audio voiceover could not be generated. Video was created without audio.');
+      } catch {
+        setVideoStatus('error');
+      }
     }
   }
 
@@ -176,10 +207,46 @@ export default function PaperDetailPage() {
               )}
 
               {tab === 'video' && (
-                <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '12px 0' }}>
-                  Video summary coming soon.
-                </div>
+                <>
+                  {videoStatus === 'loading' && (
+                    <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '12px 0' }}>
+                      Generating video summary… this may take up to a minute.
+                    </div>
+                  )}
+                  {videoStatus === 'ready' && video && (
+                    <>
+                      {videoWarning && (
+                        <div className={styles.videoWarning}>
+                          ⚠ {videoWarning}
+                        </div>
+                      )}
+                      <VideoSummary videoSummary={video} onRegenerate={handleGenerateVideo} />
+                    </>
+                  )}
+                  {(videoStatus === 'idle' || videoStatus === 'error') && (
+                    <div style={{ padding: '12px 0' }}>
+                      <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 12 }}>
+                        {videoStatus === 'error'
+                          ? 'Video generation failed.'
+                          : 'No video summary yet.'}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.generateBtn}
+                        onClick={handleGenerateVideo}
+                      >
+                        ▶ Generate video summary
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
+              {/* [GenAI Usage 2] Response ends */}
+              {/* [GenAI Usage 2] Reflection: The voiceover retry pattern (try with audio → catch
+                  → retry without + set warning) was generated because distinguishing a missing
+                  ElevenLabs key from other backend failures is not possible from the frontend
+                  without a dedicated config endpoint. The state machine mirrors the text summary
+                  tab exactly (idle/loading/ready/error) so the two tabs stay consistent. */}
             </div>
           </div>
 

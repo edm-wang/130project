@@ -227,3 +227,13 @@ export async function deleteFeedback(paperId) {
   const res = await apiFetch(`/recommendations/feedback/${paperId}`, { method: 'DELETE' });
   return res.json();
 }
+
+/** POST /papers/:id/video-summary. Generates video artifacts and returns public storage URLs. */
+export async function generateVideoSummary(paperId, includeVoiceover = true) {
+  const res = await apiFetch(`/papers/${paperId}/video-summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ include_voiceover: includeVoiceover }),
+  });
+  return res.json();
+}

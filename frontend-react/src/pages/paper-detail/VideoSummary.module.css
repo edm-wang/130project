@@ -1,0 +1,51 @@
+.player {
+  width: 100%;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: #000;
+  display: block;
+}
+
+.genStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  margin-bottom: 12px;
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+.genDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 11px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 20px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.downloadLink:hover {
+  background: var(--color-background-secondary);
+}
