@@ -127,6 +127,12 @@ class RecGenParams:
                 "upvote": self.upvote_top_k,
                 "downvote": self.downvote_top_k,
             },
+            "research_interest_weights": {
+                "field": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["field"],
+                "topic": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["topic"],
+                "author": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["author"],
+                "keyword": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["keyword"]
+            },
             "weights": {
                 "interest": self.interest_weight,
                 "saved_paper": self.saved_paper_weight,
