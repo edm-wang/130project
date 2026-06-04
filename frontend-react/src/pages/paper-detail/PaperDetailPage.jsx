@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import Widget from '../../components/widgets/Widget.jsx';
-import { fetchPaper, fetchPaperSummary, generatePaperSummary, generateVideoSummary } from '../../lib/api.js';
+import { fetchPaper, fetchPaperSummary, fetchVideoSummary, generatePaperSummary, generateVideoSummary } from '../../lib/api.js';
 import useFeedback from '../feed/useFeedback.js';
 import useSavedPapers from '../reading-list/useSavedPapers.js';
 import PaperHeader from './PaperHeader.jsx';
@@ -34,7 +34,9 @@ export default function PaperDetailPage() {
   // idle | loading | ready | not-found | error
   const [summaryStatus, setSummaryStatus] = useState('idle');
 
-  // [GenAI Usage 2] Prompt: Add a video summary tab to PaperDetailPage. State machine:
+  // [GenAI Usage 2] Prompt: Add a video summary tab to PaperDetailPage. On mount, try
+  // GET /papers/:id/video-summary first (same pattern as text summary fetch). Show the
+  // player immediately if one exists; show Generate button only on 404. State machine:
   // idle → loading → ready | error. Try POST /papers/:id/video-summary with
   // include_voiceover: true first; if it fails, retry with false and show a warning
   // banner above the VideoSummary component. Mirror the text summary state/handler pattern.
@@ -81,6 +83,24 @@ export default function PaperDetailPage() {
       .catch((err) => {
         if (cancelled) return;
         setSummaryStatus(err?.code === 'NOT_FOUND' ? 'not-found' : 'error');
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setVideo(null);
+    setVideoStatus('idle');
+    fetchVideoSummary(id)
+      .then((data) => {
+        if (cancelled) return;
+        setVideo(data.video_summary);
+        setVideoStatus('ready');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err?.code !== 'NOT_FOUND') setVideoStatus('error');
+        // NOT_FOUND is expected — leave as idle so the Generate button shows
       });
     return () => { cancelled = true; };
   }, [id]);
