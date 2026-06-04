@@ -14,6 +14,19 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_STORAGE_BUCKET = "video-summaries"
+
+# Don't delete following commands
+# [GenAI Usage]: Codex Prompt
+# Right now, Backend video summary generation has 2 problems:
+# 1. If two users generate a summary video at the same time, they will overwrite each other because right now the folder is stored by paper-id only.
+# 2. Even though video being generated already, the video summary is not read first from Supabase bucket in the fetch logic.I the same person needs to re-run video generation again after refreshing the page.
+# In all, since the video summary is the same for all user, I would love to keep the same storage structure. All users shall the same video summary, because there is  no personalization here. So, add locking mechanisms to provide two users concurrentlly generate same video summray. Second, before every generation, load from supabase bucket to see if there is one already
+# [GenAI Usage]: Codex Prompt
+# After analyze with the current pattern, let's don't worry about generation caching right now. it is too complicated and out-of-scope. It's a beta-feature that would be work on later. i think a GET method would be fine
+# [GenAI Usage]: Codex Response Begins
+DEFAULT_STORAGE_PREFIX = "video_summaries"
+VIDEO_SUMMARY_MANIFEST_FILENAME = "video_summary_manifest.json"
+VIDEO_SUMMARY_MANIFEST_VERSION = 1
 DEFAULT_SCRATCH_ROOT = Path(os.getenv("VIDEO_SUMMARY_SCRATCH_ROOT", "/tmp/generated"))
 DEFAULT_OUTPUT_ROOT = DEFAULT_SCRATCH_ROOT / "video_summaries"
 SLIDE_WIDTH = 1280
@@ -76,6 +89,31 @@ class VideoSummaryArtifact:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def load_video_summary_from_storage(paper_id: str) -> VideoSummaryArtifact | None:
+    supabase_url, service_key, bucket = _storage_config()
+    object_path = (
+        f"{DEFAULT_STORAGE_PREFIX}/{paper_id}/{VIDEO_SUMMARY_MANIFEST_FILENAME}"
+    )
+    payload = _download_storage_json(
+        supabase_url=supabase_url,
+        service_key=service_key,
+        bucket=bucket,
+        object_path=object_path,
+    )
+    if payload is None:
+        return None
+    if payload.get("manifest_version") != VIDEO_SUMMARY_MANIFEST_VERSION:
+        raise VideoSummaryError("Stored video summary manifest has an unsupported version.")
+
+    artifact = payload.get("video_summary")
+    if not isinstance(artifact, dict):
+        raise VideoSummaryError("Stored video summary manifest is invalid.")
+    try:
+        return VideoSummaryArtifact(**artifact)
+    except TypeError as exc:
+        raise VideoSummaryError("Stored video summary manifest is invalid.") from exc
 
 
 def create_video_summary_artifacts(
@@ -153,7 +191,8 @@ def create_video_summary_artifacts(
             video_path,
         )
 
-    static_root = output_root.parent
+    static_root = output_dir
+    storage_object_prefix = f"{DEFAULT_STORAGE_PREFIX}/{paper_id}"
     storage_urls = _upload_artifacts_to_storage(
         _collect_artifact_paths(
             pptx_path=pptx_path,
@@ -169,12 +208,13 @@ def create_video_summary_artifacts(
             visual_assets=visual_assets,
         ),
         static_root=static_root,
+        object_prefix=storage_object_prefix,
     )
 
     video_url = _artifact_url(video_path, static_root, storage_urls)
     # parental path
     out_dir = video_url.rsplit("/", 1)[0] + "/"
-    return VideoSummaryArtifact(
+    artifact = VideoSummaryArtifact(
         output_dir=out_dir,
         pptx_path=_artifact_url(pptx_path, static_root, storage_urls),
         video_path=video_url,
@@ -208,6 +248,14 @@ def create_video_summary_artifacts(
         script=[asdict(line) for line in script],
         voiceover=_public_voiceover_dict(voiceover, static_root, storage_urls) if voiceover else None,
     )
+    _upload_video_summary_manifest(
+        paper_id=paper_id,
+        artifact=artifact,
+        output_dir=output_dir,
+        static_root=static_root,
+        object_prefix=storage_object_prefix,
+    )
+    return artifact
 
 
 def _artifact_url(path: Path, static_root: Path, storage_urls: dict[Path, str]) -> str:
@@ -286,19 +334,17 @@ def _collect_artifact_paths(
     return unique_paths
 
 
-def _upload_artifacts_to_storage(paths: list[Path], *, static_root: Path) -> dict[Path, str]:
-    supabase_url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    bucket = os.getenv("VIDEO_SUMMARY_STORAGE_BUCKET", DEFAULT_STORAGE_BUCKET)
-
-    if not supabase_url or not service_key:
-        raise VideoSummaryError(
-            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to persist video summaries."
-        )
+def _upload_artifacts_to_storage(
+    paths: list[Path],
+    *,
+    static_root: Path,
+    object_prefix: str,
+) -> dict[Path, str]:
+    supabase_url, service_key, bucket = _storage_config()
 
     uploaded_urls: dict[Path, str] = {}
     for path in paths:
-        object_path = _storage_object_path(path, static_root)
+        object_path = _storage_object_path(path, static_root, object_prefix)
         _upload_file_to_storage(
             supabase_url=supabase_url,
             service_key=service_key,
@@ -310,11 +356,50 @@ def _upload_artifacts_to_storage(paths: list[Path], *, static_root: Path) -> dic
     return uploaded_urls
 
 
-def _storage_object_path(path: Path, static_root: Path) -> str:
+def _upload_video_summary_manifest(
+    *,
+    paper_id: str,
+    artifact: VideoSummaryArtifact,
+    output_dir: Path,
+    static_root: Path,
+    object_prefix: str,
+) -> None:
+    manifest_path = output_dir / VIDEO_SUMMARY_MANIFEST_FILENAME
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_version": VIDEO_SUMMARY_MANIFEST_VERSION,
+                "paper_id": paper_id,
+                "video_summary": artifact.to_dict(),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    _upload_artifacts_to_storage(
+        [manifest_path],
+        static_root=static_root,
+        object_prefix=object_prefix,
+    )
+
+
+def _storage_config() -> tuple[str, str, str]:
+    supabase_url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    bucket = os.getenv("VIDEO_SUMMARY_STORAGE_BUCKET", DEFAULT_STORAGE_BUCKET)
+    if not supabase_url or not service_key:
+        raise VideoSummaryError(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required to persist video summaries."
+        )
+    return supabase_url, service_key, bucket
+
+
+def _storage_object_path(path: Path, static_root: Path, object_prefix: str) -> str:
     try:
-        return path.relative_to(static_root).as_posix()
+        relative_path = path.relative_to(static_root).as_posix()
     except ValueError:
-        return path.name
+        relative_path = path.name
+    return f"{object_prefix.rstrip('/')}/{relative_path}"
 
 
 def _upload_file_to_storage(
@@ -355,6 +440,58 @@ def _upload_file_to_storage(
             f"Supabase Storage upload failed for {object_path}."
         ) from exc
 
+
+def _download_storage_json(
+    *,
+    supabase_url: str,
+    service_key: str,
+    bucket: str,
+    object_path: str,
+) -> dict | None:
+    url = (
+        f"{supabase_url}/storage/v1/object/"
+        f"{quote(bucket, safe='')}/{quote(object_path, safe='/')}"
+    )
+    request = Request(
+        url,
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+        },
+    )
+    try:
+        with urlopen(request, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        body = exc.read(500).decode("utf-8", errors="replace")
+        if exc.code == 404 or (
+            exc.code == 400 and "not found" in body.lower()
+        ):
+            return None
+        raise VideoSummaryError(
+            f"Supabase Storage read failed for {object_path} with HTTP {exc.code}: {body}"
+        ) from exc
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise VideoSummaryError("Stored video summary manifest is invalid.") from exc
+    except (TimeoutError, URLError, OSError) as exc:
+        raise VideoSummaryError(
+            f"Supabase Storage read failed for {object_path}."
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise VideoSummaryError("Stored video summary manifest is invalid.")
+    return payload
+
+
+# [GenAI Usage]: Codex Response Ends
+# [GenAI Usage]: Reflection
+# After inspecting the result from Codex, I decided not to add generation caching or locking because it adds unnecessary complexity --  we can tolerant the inconsistency right now.
+# right now. The backend instead provides GET /papers/{paper_id}/video-summary, which reads
+# the completed video summary manifest from Supabase Storage. POST generation still generates
+# and uploads normally, and uploads the manifest so the GET method can reconstruct the response.
+# One safeguard we also introduce is that every user would have its own personal namespace during temporary directory to avoid overwrite. 
+# Therefore, the code shall be accepted right now.
 
 def _storage_public_url(supabase_url: str, bucket: str, object_path: str) -> str:
     return (
