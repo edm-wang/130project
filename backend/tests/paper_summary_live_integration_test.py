@@ -90,37 +90,71 @@ def test_app(live_supabase_client):
         app.dependency_overrides.clear()
 
 
+def insert_live_test_paper(live_supabase_client, *, abstract):
+    test_run_id = str(uuid4())
+    paper_response = (
+        live_supabase_client.table("papers")
+        .insert(
+            {
+                "source": "manual",
+                "source_id": f"pytest-live-summary-{test_run_id}",
+                "title": "Live Integration Test Paper About Retrieval Quality",
+                "abstract": abstract,
+                "authors_text": "Pytest Author",
+                "categories": ["integration-test"],
+                "source_url": "https://example.com/live-summary-integration-test",
+            }
+        )
+        .execute()
+    )
+    assert paper_response.data
+    return paper_response.data[0]["id"]
+
+
+def delete_live_test_paper(live_supabase_client, paper_id):
+    if not paper_id:
+        return
+    (
+        live_supabase_client.table("paper_summaries")
+        .delete()
+        .eq("paper_id", paper_id)
+        .execute()
+    )
+    (
+        live_supabase_client.table("papers")
+        .delete()
+        .eq("id", paper_id)
+        .execute()
+    )
+
+
+def get_stored_summary(live_supabase_client, paper_id):
+    response = (
+        live_supabase_client.table("paper_summaries")
+        .select("paper_id, summary_text, prompt_version, summary_status")
+        .eq("paper_id", paper_id)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
 def test_generate_paper_summary_live_openai_and_supabase_storage(
     live_supabase_client,
     test_app,
 ):
     paper_id = None
-    test_run_id = str(uuid4())
-    paper_source_id = f"pytest-live-summary-{test_run_id}"
 
     try:
-        paper_response = (
-            live_supabase_client.table("papers")
-            .insert(
-                {
-                    "source": "manual",
-                    "source_id": paper_source_id,
-                    "title": "Live Integration Test Paper About Retrieval Quality",
-                    "abstract": (
-                        "This test paper studies retrieval quality for research-paper "
-                        "recommendation systems. It compares a baseline keyword matcher "
-                        "with an embedding-based retriever and reports improved ranking "
-                        "quality on a small evaluation set."
-                    ),
-                    "authors_text": "Pytest Author",
-                    "categories": ["integration-test"],
-                    "source_url": "https://example.com/live-summary-integration-test",
-                }
-            )
-            .execute()
+        paper_id = insert_live_test_paper(
+            live_supabase_client,
+            abstract=(
+                "This test paper studies retrieval quality for research-paper "
+                "recommendation systems. It compares a baseline keyword matcher "
+                "with an embedding-based retriever and reports improved ranking "
+                "quality on a small evaluation set."
+            ),
         )
-        assert paper_response.data
-        paper_id = paper_response.data[0]["id"]
 
         response = TestClient(test_app, raise_server_exceptions=False).post(
             f"/papers/{paper_id}/summary",
@@ -138,39 +172,89 @@ def test_generate_paper_summary_live_openai_and_supabase_storage(
         assert summary["prompt_version"] == PROMPT_VERSION
         assert len(summary["summary_text"].strip()) > 40
 
-        stored_response = (
-            live_supabase_client.table("paper_summaries")
-            .select("paper_id, summary_text, prompt_version, summary_status")
-            .eq("paper_id", paper_id)
-            .limit(1)
-            .execute()
-        )
-        assert stored_response.data
-        stored_summary = stored_response.data[0]
+        stored_summary = get_stored_summary(live_supabase_client, paper_id)
+        assert stored_summary
         assert stored_summary["paper_id"] == paper_id
         assert stored_summary["prompt_version"] == PROMPT_VERSION
         assert stored_summary["summary_status"] == "completed"
         assert stored_summary["summary_text"] == summary["summary_text"]
     finally:
-        if paper_id:
-            (
-                live_supabase_client.table("paper_summaries")
-                .delete()
-                .eq("paper_id", paper_id)
-                .execute()
-            )
-            (
-                live_supabase_client.table("papers")
-                .delete()
-                .eq("id", paper_id)
-                .execute()
-            )
+        delete_live_test_paper(live_supabase_client, paper_id)
 
 
 # [GenAI Usage 1] Response ends
+# [GenAI Usage 2] Codex Prompt
+# Please add more opt-in live integration coverage for Person 6's AI QA responsibilities around
+# summary route behavior. Keep these tests small and clean up all rows. Cover cached summary reuse
+# against the real Supabase table and missing-abstract error handling without triggering OpenAI.
+# These tests should continue to require RUN_LIVE_LLM_TESTS=1 so normal pytest runs do not spend API
+# calls or write to the connected Supabase project.
+# [GenAI Usage 2] Response begins:
+
+
+def test_generate_paper_summary_live_reuses_cached_summary(
+    live_supabase_client,
+    test_app,
+):
+    paper_id = None
+
+    try:
+        paper_id = insert_live_test_paper(
+            live_supabase_client,
+            abstract=(
+                "This cache test paper studies short abstract summarization for "
+                "research discovery tools. It should generate once and then reuse "
+                "the stored summary when the prompt version still matches."
+            ),
+        )
+
+        first_response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary",
+            json={"use_pdf_sections": False},
+        )
+        assert first_response.status_code == 200, first_response.text
+        first_body = first_response.json()
+        assert first_body["generated"] is True
+
+        second_response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary",
+            json={"use_pdf_sections": False},
+        )
+        assert second_response.status_code == 200, second_response.text
+        second_body = second_response.json()
+        assert second_body["generated"] is False
+        assert second_body["stored"] is True
+        assert second_body["summary"]["summary_text"] == first_body["summary"]["summary_text"]
+        assert second_body["summary"]["prompt_version"] == PROMPT_VERSION
+    finally:
+        delete_live_test_paper(live_supabase_client, paper_id)
+
+
+def test_generate_paper_summary_live_missing_abstract_returns_400_without_storage(
+    live_supabase_client,
+    test_app,
+):
+    paper_id = None
+
+    try:
+        paper_id = insert_live_test_paper(live_supabase_client, abstract=None)
+
+        response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary",
+            json={"use_pdf_sections": False},
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Paper abstract is missing."
+        assert get_stored_summary(live_supabase_client, paper_id) is None
+    finally:
+        delete_live_test_paper(live_supabase_client, paper_id)
+
+
+# [GenAI Usage 2] Response ends
 # [GenAI Usage] Reflection
-# I used Codex to create this as an opt-in live integration test instead of adding it to the normal
-# mocked suite. That matters because the test spends a real OpenAI request and writes to the real
-# Supabase project. The test keeps the blast radius small by using abstract-based summary generation,
-# inserting one identifiable dummy paper, asserting the stored summary row, and deleting both the
-# generated summary and paper in a finally block.
+# I used Codex to create opt-in live integration tests instead of adding them to the normal mocked
+# suite. That matters because these tests can spend real OpenAI requests and write to the real
+# Supabase project. The tests keep the blast radius small by inserting identifiable dummy papers,
+# using abstract-based summary generation, checking both stored rows and route responses, and deleting
+# generated summaries and papers in finally blocks.
