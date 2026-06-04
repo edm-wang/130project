@@ -26,8 +26,14 @@ from app.services.llm_summary import (  # noqa: E402
     SummaryConfigurationError,
     SummaryProviderError,
 )
-from app.services.pdf_sections import PaperSection, PdfFetchError  # noqa: E402
-from app.services.summary_prompt import PROMPT_VERSION, SECTION_PROMPT_VERSION  # noqa: E402
+from app.services.pdf_sections import (  # noqa: E402
+    PaperSection,
+    PdfFetchError,
+)
+from app.services.summary_prompt import (  # noqa: E402
+    PROMPT_VERSION,
+    SECTION_PROMPT_VERSION,
+)
 from app.supabase.auth import AuthContext, get_auth_context  # noqa: E402
 
 
