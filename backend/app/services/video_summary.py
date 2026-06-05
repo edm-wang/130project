@@ -1104,3 +1104,6 @@ def _font_height(font) -> int:
         return int(font.getbbox("Ag")[3] - font.getbbox("Ag")[1])
     except AttributeError:
         return int(font.getsize("Ag")[1])
+
+# [GenAI Usage] Reflection: sometimes the openAI models itself is not able to write good slides by itself. 
+# extra plans are necessary as intermediate procedures. 
