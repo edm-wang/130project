@@ -133,6 +133,11 @@ def regenerate_paper_summary(
     options = request or SummaryGenerationRequest()
     return _generate_and_store_summary(client, str(paper_id), options)
 
+# [GenAI Reflection] I asked Codex to restore the summary persistence path while keeping the implementation aligned with 
+# the existing FastAPI router and Supabase RLS authentication pattern. I reviewed that the endpoint first checks for an existing matching summary, 
+# only calls the LLM when needed, extracts bounded PDF sections before prompting, saves the generated response with model and prompt metadata, 
+# supports custom prompt instructions, and returns whether the result was newly generated or retrieved from storage.
+
 #[GenAI Usage] Prompt: implement the video summary functionality. Make it similar to text summary, but instead use a python package that directly creates presentation slides, . Write the script with timestamps. Then play the slides with the timestamps and render a video.
 #[GenAI Usage] LLM response begins
 

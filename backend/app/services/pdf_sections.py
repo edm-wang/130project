@@ -254,7 +254,6 @@ def _normalize_text(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
-
 def _save_embedded_image(document, xref: int, image_path: Path) -> bool:
     try:
         import fitz
@@ -309,3 +308,8 @@ def _shorten_context(text: str, *, limit: int = MAX_VISUAL_CONTEXT_CHARS) -> str
     if len(clean_text) <= limit:
         return clean_text
     return clean_text[: limit - 3].rstrip() + "..."
+
+# [GenAI Usage] LLM response end
+# [GenAI Reflection] I asked Codex to keep this PDF processing layer deterministic and bounded instead of making the LLM responsible for fetching files. 
+# I reviewed that the code validates PDF URLs, caps download size and page count, extracts text lazily through pypdf, 
+# detects common paper section headings, and falls back to body chunks when headings are unavailable.
