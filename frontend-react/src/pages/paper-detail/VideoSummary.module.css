@@ -1,0 +1,134 @@
+/* [GenAI Usage] Prompt: Write CSS module styles for VideoSummary. Needs: a full-width
+   video player, a proportional chapter timeline bar (thin segments, active = brand color),
+   a chapter list with timestamp + title rows (active row gets green tint), and a footer
+   row with download link and regenerate button. Match the app's design tokens
+   (--color-brand, --color-border-tertiary, --color-text-secondary, --border-radius-md). */
+/* [GenAI Usage] Response begins: */
+.player {
+  width: 100%;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: #000;
+  display: block;
+}
+
+.genStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  margin-bottom: 12px;
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+.genDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.timeline {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.timelineSegment {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-tertiary);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.timelineSegment:hover {
+  background: var(--color-text-tertiary);
+}
+.timelineActive {
+  background: var(--color-brand);
+}
+
+.chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 10px;
+}
+
+.chapter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--border-radius-md);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.chapter:hover {
+  background: var(--color-background-secondary);
+}
+.chapterActive {
+  background: #e1f5ee;
+}
+.chapterActive .chapterTime {
+  color: var(--color-brand);
+}
+.chapterActive .chapterTitle {
+  color: var(--color-brand);
+  font-weight: 500;
+}
+
+.chapterTime {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.chapterTitle {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 11px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 20px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.downloadLink:hover {
+  background: var(--color-background-secondary);
+}
+/* [GenAI Usage] Response ends */
+/* [GenAI Reflection] I used Claude Code to generate these styles because the timeline and
+   chapter list required careful proportional layout (segment widths as percentages, tabular
+   timestamps) that is tedious to hand-write. The active-chapter highlight reuses the same
+   #e1f5ee / --color-brand palette as the genStatus pill and TextSummary highlight to keep
+   the video tab visually consistent with the rest of the paper detail page. */

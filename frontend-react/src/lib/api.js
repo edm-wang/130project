@@ -227,3 +227,19 @@ export async function deleteFeedback(paperId) {
   const res = await apiFetch(`/recommendations/feedback/${paperId}`, { method: 'DELETE' });
   return res.json();
 }
+
+/** GET /papers/:id/video-summary. Returns cached { video_summary } or throws NOT_FOUND. */
+export async function fetchVideoSummary(paperId) {
+  const res = await apiFetch(`/papers/${paperId}/video-summary`);
+  return res.json();
+}
+
+/** POST /papers/:id/video-summary. Generates video artifacts and returns public storage URLs. */
+export async function generateVideoSummary(paperId, includeVoiceover = true) {
+  const res = await apiFetch(`/papers/${paperId}/video-summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ include_voiceover: includeVoiceover }),
+  });
+  return res.json();
+}

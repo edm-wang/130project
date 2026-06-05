@@ -1,4 +1,6 @@
+from pathlib import Path
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -23,6 +25,7 @@ from app.services.video_summary import (
     DEFAULT_OUTPUT_ROOT,
     VideoSummaryError,
     create_video_summary_artifacts,
+    load_video_summary_from_storage,
 )
 from app.supabase.auth import AuthContext, get_auth_context
 
@@ -43,6 +46,35 @@ class VideoSummaryRequest(BaseModel):
     fallback_to_abstract: bool = True
     slide_duration_seconds: int = 8
     include_voiceover: bool = True
+
+# Don't delete following comments
+# [GenAI Usage - concurrency]: Codex Prompt
+# (Continue from GenAI usage - concurrency in video-summary, Round 2) lets don't worry about generation caching right now. It is too complicated. i think a GET method would be fine
+# [GenAI Usage - concurrency]: Codex Response Begins
+@summary_router.get("/{paper_id}/video-summary")
+def get_paper_video_summary(
+    paper_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+):
+    paper_id_str = str(paper_id)
+    _get_paper(auth.client, paper_id_str)
+    try:
+        video_summary = load_video_summary_from_storage(paper_id_str)
+    except VideoSummaryError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if video_summary is None:
+        raise HTTPException(status_code=404, detail="Video summary not found")
+    return {
+        "video_summary": video_summary.to_dict(),
+        "generated": False,
+        "stored": True,
+    }
+# [GenAI Usage]: Codex Response Ends
+# [GenAI Usage]: Reflection
+# This GET endpoint checks that the paper exists, reads the completed video summary manifest
+# from Supabase Storage, and returns error when no stored video summary is available.
+# The code is very clear and shall be accepted.
+# I thoroughly checked its validity - the code will throw 404 and 500 error code at correct time.
 
 
 #[GenAI Usage] Prompt: Restore persistent paper-summary caching for the Team 3 summary MVP and then extend it to summarize papers by PDF section. 
@@ -115,6 +147,7 @@ def generate_paper_video_summary(
     options = request or VideoSummaryRequest()
     paper_id_str = str(paper_id)
     paper = _get_paper(client, paper_id_str)
+    scratch_output_root = _video_summary_scratch_root(auth.user.id)
 
     summary_options = SummaryGenerationRequest(
         custom_instructions=options.custom_instructions,
@@ -141,6 +174,7 @@ def generate_paper_video_summary(
             options=options,
             paper_id=paper_id_str,
             summary_text=summary["summary_text"],
+            output_root=scratch_output_root,
         )
         slide_plan = generate_video_slide_plan(
             title=paper["title"],
@@ -157,6 +191,7 @@ def generate_paper_video_summary(
             video_instructions=options.video_instructions,
             slide_duration_seconds=options.slide_duration_seconds,
             include_voiceover=options.include_voiceover,
+            output_root=scratch_output_root,
         )
     except MissingPaperContentError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -267,6 +302,7 @@ def _prepare_video_source_material(
     options: VideoSummaryRequest,
     paper_id: str,
     summary_text: str,
+    output_root: Path,
 ) -> tuple[list[PaperSection], list]:
     sections: list[PaperSection] = []
     image_assets = []
@@ -277,7 +313,7 @@ def _prepare_video_source_material(
             sections = extract_pdf_sections(pdf_bytes)
             image_assets = extract_pdf_visual_assets(
                 pdf_bytes,
-                DEFAULT_OUTPUT_ROOT / paper_id / "assets",
+                output_root / paper_id / "assets",
             )
         except PdfFetchError as exc:
             if not options.fallback_to_abstract:
@@ -297,6 +333,15 @@ def _prepare_video_source_material(
 
     return sections, image_assets
 
+
+# [GenAI Usage - concurrency]: Codex Prompt
+# (Continue from GenAI usage - concurrency in video-summary, Round 3), For /tmp, let user edit ./generated/videosummary/{userid}/{paperid}
+# [GenAI Usage - concurrency] : Codex Response Begins
+def _video_summary_scratch_root(user_id) -> Path:
+    return DEFAULT_OUTPUT_ROOT / str(user_id)
+# [GenAI Usage - concurrency]: Codex Response Ends
+# [GenAI Usage - concurrency]: Reflection
+# This would be a safeguard mechanism to avoid user overwriting each other's work. Shall be accepted right now as a temporary mitigation of the concurrency issue. This is core fix, and the rest of the code just call this instead of the defaultOUTPUT_ROOT. Code would be accepted it right now. Later, we will may consider tune this output path into something more robust (i.e., hashing user-id). 
 
 def _should_use_existing_summary(
     existing_summary: dict | None,
