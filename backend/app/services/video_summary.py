@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 DEFAULT_STORAGE_BUCKET = "video-summaries"
 
 # Don't delete following commands
-# [GenAI Usage]: Codex Prompt
+# [GenAI Usage - concurrency]: Codex Prompt
 # Right now, Backend video summary generation has 2 problems:
 # 1. If two users generate a summary video at the same time, they will overwrite each other because right now the folder is stored by paper-id only.
 # 2. Even though video being generated already, the video summary is not read first from Supabase bucket in the fetch logic.I the same person needs to re-run video generation again after refreshing the page.
@@ -484,13 +484,12 @@ def _download_storage_json(
     return payload
 
 
-# [GenAI Usage]: Codex Response Ends
-# [GenAI Usage]: Reflection
-# After inspecting the result from Codex, I decided not to add generation caching or locking because it adds unnecessary complexity --  we can tolerant the inconsistency right now.
-# right now. The backend instead provides GET /papers/{paper_id}/video-summary, which reads
-# the completed video summary manifest from Supabase Storage. POST generation still generates
-# and uploads normally, and uploads the manifest so the GET method can reconstruct the response.
+# [GenAI Usage - concurrency]: Codex Response Ends
+# [GenAI Usage - concurrency]: Reflection
+# After inspecting the result about "official solution to fix concurrency" from Codex, I decided not to add generation locking mechanism because it adds unnecessary complexity --  we can tolerant the inconsistency right now because collision secenaios are rare and unlikely to happen. 
+# There is no need to pay such high design cost to resolve small bugs that are unlikely to happen.
 # One safeguard we also introduce is that every user would have its own personal namespace during temporary directory to avoid overwrite. 
+# Then, the backend now provides GET /papers/{paper_id}/video-summary, which reads the completed video summary manifest from Supabase Storage. POST method remains intact and unchanged -- persisting storage in Supabase bucket. 
 # Therefore, the code shall be accepted right now.
 
 def _storage_public_url(supabase_url: str, bucket: str, object_path: str) -> str:
