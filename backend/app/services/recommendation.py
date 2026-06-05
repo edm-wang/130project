@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from math import sqrt
+import re
 from typing import Any, Literal, Optional
 
 from app.services.embedding_config import (
@@ -25,6 +26,13 @@ class DecayConfig:
     grace_days: float = 0.0
     floor: DecayModificationConfig = field(default_factory=DecayModificationConfig)
     plateau: DecayModificationConfig = field(default_factory=DecayModificationConfig)
+
+DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS = {
+    "topic": 1.0,
+    "field": 1.0,
+    "keyword": 1.0,
+    "author": 1.0,
+}
 
 #[GenAI Usage] Prompt: the code below is the result of a series of conversations with Codex. The specific conversation can be found in
 # genai_usage_appendix\recommendation_runner_setup.md. The overall content of the conversation involves me proposing a detailed
@@ -67,7 +75,7 @@ class UserPaperSignal:
 
 @dataclass
 class RecGenParams:
-    algorithm_version: str = "multi_vector_v1"
+    algorithm_version: str = "multi_vector_v2"
     embedding_model: str = DEFAULT_EMBEDDING_MODEL
     embedding_dimensions: int = DEFAULT_EMBEDDING_DIMENSIONS
     retrieval_top_n: int = 200
@@ -78,8 +86,8 @@ class RecGenParams:
     downvote_top_k: int = 10
     interest_weight: float = 1.0
     saved_paper_weight: float = 0.2
-    upvote_weight: float = 0.4
-    downvote_weight: float = 0.4
+    upvote_weight: float = 0.6
+    downvote_weight: float = 0.6
     freshness_weight: float = 0.1
     downvote_penalty_cap: float = 1.0
     downvote_similarity_threshold: float = 0.65
@@ -120,6 +128,12 @@ class RecGenParams:
                 "upvote": self.upvote_top_k,
                 "downvote": self.downvote_top_k,
             },
+            "research_interest_weights": {
+                "field": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["field"],
+                "topic": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["topic"],
+                "author": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["author"],
+                "keyword": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS["keyword"]
+            },
             "weights": {
                 "interest": self.interest_weight,
                 "saved_paper": self.saved_paper_weight,
@@ -154,6 +168,7 @@ class RecGenParams:
 # core recommendation algorithm, and the execution of the core recommendation algorithm. In addition, I have carefully examined the code to
 # ensure it is correct and had detailed subsequent conversation with Codex to modify specific segments of the code that deviated from my
 # specification or introduced unnecessary complexity or code bloating.
+
 
 
 def _clamp_unit_interval(val: float) -> float:
@@ -235,6 +250,26 @@ def _similarity(
     cosine_similarity = dot_product / (norm_a * norm_b)
     return _clamp_unit_interval((1 + cosine_similarity) / 2)
 
+
+def _normalize_author_name(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
+def _paper_has_author(paper: dict[str, Any], author_name: str) -> bool:
+    normalized_author_name = _normalize_author_name(author_name)
+    if not normalized_author_name:
+        return False
+
+    authors_text = str(paper.get("authors_text") or "")
+    normalized_paper_authors = set()
+    for author in authors_text.split(","):
+        normalized_paper_author = _normalize_author_name(author)
+        if normalized_paper_author:
+            normalized_paper_authors.add(normalized_paper_author)
+
+    return normalized_author_name in normalized_paper_authors
+
+
 def _interest_score(
         paper: CandidatePaper,
         params: RecGenParams
@@ -258,11 +293,16 @@ def _interest_score(
 
     interest_id_to_similarities = {}
     for interest in params.interests:
-        similarity = _similarity(paper.embedding, interest.embedding)
-        if similarity == 0.0 and interest.interest_id in paper.interest_similarities:
-            similarity = _clamp_unit_interval(
-                float(paper.interest_similarities[interest.interest_id])
+        if interest.interest_type == "author":
+            similarity = (
+                1.0 if _paper_has_author(paper.paper, interest.value) else 0.0
             )
+        else:
+            similarity = _similarity(paper.embedding, interest.embedding)
+            if similarity == 0.0 and interest.interest_id in paper.interest_similarities:
+                similarity = _clamp_unit_interval(
+                    float(paper.interest_similarities[interest.interest_id])
+                )
 
         interest_id_to_similarities[interest.interest_id] = _clamp_unit_interval(
             float(similarity)

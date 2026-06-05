@@ -66,6 +66,7 @@ def get_interests(auth: AuthContext = Depends(get_auth_context)):
 
 @users_router.post("/me/interests", status_code=201)
 def add_interest(body: InterestCreate, auth: AuthContext = Depends(get_auth_context)):
+    from app.services.recommendation import DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS
     client = auth.client
     user_id = str(auth.user.id)
     value = body.value.strip()
@@ -79,7 +80,7 @@ def add_interest(body: InterestCreate, auth: AuthContext = Depends(get_auth_cont
                 "interest_type": body.interest_type,
                 "value": value,
                 "normalized_value": value.lower(),
-                "preference_weight": 1.0,
+                "preference_weight": DEFAULT_USER_INTEREST_TO_PREFERENCE_WEIGHTS[body.interest_type],
                 "is_active": True,
             },
             on_conflict="user_id,interest_type,normalized_value",
