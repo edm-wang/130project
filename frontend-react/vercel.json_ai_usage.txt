@@ -1,0 +1,20 @@
+# vercel.json GenAI Usage
+--- Why it is a separate txt file? ---
+Because vercel.json does not accept any additional fields that aims for comments. 
+So, I document the ai usage here in a separate txt file
+
+
+[GenAI Usage] Codex Prompt:
+I notice that in vercel.json, the request to retrieve favcon logo is missing. can u you fix this error by creating a static asset folder in frontend and edit routing logic in vercel.json
+
+[GenAI Usage] Response begins:
+Codex created frontend-react/public/favicon.ico and frontend-react/public/favicon.png from the existing built favicon assets, added favicon link tags to frontend-react/index.html, and updated frontend-react/vercel.json to serve filesystem assets before falling back to index.html for React routes.
+[GenAI Usage] Response ends
+
+[GenAI Usage] Reflection:
+I noticed this constant error from the production backend server console, where the backend got constant 404 Error for a resource that shall exist in the frontend. 
+This immediately reminds me that there is something wrong with the static-assets routing. 
+Then, I described the error clearly with Codex and prompted it for a quick fix. 
+The fix should be accepted, because it satisfies my goals: 
+1. creates a public/ folder for static pngs
+2. changes the routing logic so that not all requests go to backend; some static resources will check within fronten server's filesystem.
