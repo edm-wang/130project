@@ -154,3 +154,6 @@ def _format_video_image_assets(image_assets) -> str:
     return "\n\n".join(blocks)
 
 # [GenAI Usage] LLM response end
+# [GenAI Reflection] I asked Codex to keep the prompt builders small and explicit. 
+# I reviewed that the abstract prompt keeps the original behavior, the section prompt asks for structured markdown output, 
+# and custom instructions are appended only when the caller provides non-empty text.

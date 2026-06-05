@@ -154,7 +154,6 @@ def call_llm_provider(
         raise SummaryProviderError("LLM returned an empty summary")
     return summary
 
-
 def _parse_slide_plan_json(raw_slide_plan: str) -> list[dict]:
     try:
         data = json.loads(_extract_json_object(raw_slide_plan))
@@ -193,3 +192,8 @@ def _extract_json_object(raw_text: str) -> str:
     if start == -1 or end == -1 or end <= start:
         return clean_text
     return clean_text[start:end + 1]
+
+# [GenAI Usage] LLM response end
+# [GenAI Reflection] I asked Codex to preserve the existing OpenAI call wrapper and add a section-summary path.
+# Both generation functions return the same GeneratedSummary 
+# metadata shape and route provider/configuration errors through the existing exception classes.
