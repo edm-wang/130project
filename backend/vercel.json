@@ -13,5 +13,57 @@
     }
   ],
   "crons": [
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-ai",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-db",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-cv",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-lg",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/cs-cl",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/econ",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/eess",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/math",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/physics",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/q-bio",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/q-fin",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/internal/jobs/paper-ingestion/stat",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/internal/jobs/recommendations",
+      "schedule": "0 4 * * *"
+    }
   ]
 }
