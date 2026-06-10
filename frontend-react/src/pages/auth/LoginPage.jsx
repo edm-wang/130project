@@ -1,3 +1,12 @@
+// [GenAI Usage] Prompt: Build a login page that handles both sign in and sign up using
+// Supabase's signInWithPassword and signUp, with a tab toggle to switch between the two modes.
+// After a successful sign-in, redirect to wherever RequireAuth originally sent the user from
+// (the ?next= param), defaulting to /feed if there isn't one. If they're already signed in and
+// land on this page somehow, redirect them away immediately instead of showing the form again.
+// Sign-up should show a "check your email" message instead of redirecting since Supabase
+// requires email confirmation. Also handle the case where Supabase env vars aren't configured,
+// disable the form and show a notice telling the dev what env vars to set.
+// [GenAI Usage] Response Starts:
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
@@ -150,3 +159,12 @@ export default function LoginPage() {
     </div>
   );
 }
+// [GenAI Usage] Response Ends
+// [GenAI Reflection] I used Claude Code for the auth logic since I wasn't confident about the
+// difference between signInWithPassword and signUp error handling, and whether signUp actually
+// returns an error object the same way signInWithPassword does (it does). The early return for
+// auth.status === 'signed-in' was something I added after testing: without it, if you were
+// already logged in and navigated back to /auth/login (e.g. by editing the URL), the form would
+// just sit there instead of bouncing you to /feed. I also tested the ?next= param by signing
+// out from /reading-list and confirming I landed back on /reading-list after signing back in,
+// not just /feed.
