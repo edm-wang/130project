@@ -1,3 +1,12 @@
+// [GenAI Usage] Prompt: Build the data-fetching hook for FeedPage. It should call
+// fetchRecommendations from api.js, but I also want a mock mode (controlled by
+// VITE_USE_MOCK_DATA) that returns canned data from mockData.js so I can work on the feed UI
+// without the backend running. It needs to track loading/ready/error states, and handle the
+// case where the user isn't signed in yet (don't just show a generic error, distinguish
+// "no token" from "network error" from "unauthorized" so FeedPage can show different messages).
+// Also it should re-fetch automatically if the user's auth state changes, e.g. they sign in
+// after landing on the page while signed out.
+// [GenAI Usage] Response Starts:
 import { useEffect, useState } from 'react';
 
 import useAuth from '../../hooks/useAuth.js';
@@ -110,3 +119,12 @@ export default function useRecommendations({ enabled = true } = {}) {
 
   return state;
 }
+// [GenAI Usage] Response Ends
+// [GenAI Reflection] I leaned on Claude Code for the error-code-to-status mapping in the catch
+// block (NO_TOKEN/NETWORK/UNAUTHORIZED to 'no-token'/'network-error'/'unauthorized'), since
+// those error codes come from apiFetch in api.js and I wanted the mapping to actually line up
+// with what that function throws rather than guessing. The mock mode branch was my addition on
+// top of the first draft, since I needed to keep building the FeedPage layout while a teammate
+// was still finishing the backend recommendations endpoint. I tested both paths by toggling
+// VITE_USE_MOCK_DATA in .env.development and confirming the feed renders the same cards either
+// way.
