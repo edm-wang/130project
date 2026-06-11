@@ -139,6 +139,33 @@ def get_stored_summary(live_supabase_client, paper_id):
     return response.data[0] if response.data else None
 
 
+def upsert_live_cached_summary(
+    live_supabase_client,
+    paper_id,
+    *,
+    summary_text,
+    prompt_version=PROMPT_VERSION,
+):
+    response = (
+        live_supabase_client.table("paper_summaries")
+        .upsert(
+            {
+                "paper_id": paper_id,
+                "summary_text": summary_text,
+                "summary_status": "completed",
+                "llm_provider": "pytest",
+                "llm_model": "cached-test-model",
+                "prompt_version": prompt_version,
+                "error_message": None,
+            },
+            on_conflict="paper_id",
+        )
+        .execute()
+    )
+    assert response.data
+    return response.data[0]
+
+
 def test_generate_paper_summary_live_openai_and_supabase_storage(
     live_supabase_client,
     test_app,
@@ -252,6 +279,142 @@ def test_generate_paper_summary_live_missing_abstract_returns_400_without_storag
 
 
 # [GenAI Usage 2] Response ends
+# [GenAI Usage 3] Codex Prompt
+# Add a few more opt-in live API tests for report-critical summary cache behavior. Keep them
+# bounded to one OpenAI route call each by seeding cached paper_summaries rows directly, then verify
+# custom instructions, stale prompt versions, and regenerate requests do not incorrectly reuse cache.
+# [GenAI Usage 3] Response begins:
+
+
+def test_generate_paper_summary_live_custom_instructions_bypass_cached_summary(
+    live_supabase_client,
+    test_app,
+):
+    paper_id = None
+    cached_text = "Cached generic summary that should not satisfy custom instructions."
+
+    try:
+        paper_id = insert_live_test_paper(
+            live_supabase_client,
+            abstract=(
+                "This paper studies custom summary instructions for AI-assisted "
+                "research discovery. It compares generic summaries with summaries "
+                "that emphasize limitations and evaluation caveats."
+            ),
+        )
+        upsert_live_cached_summary(
+            live_supabase_client,
+            paper_id,
+            summary_text=cached_text,
+        )
+
+        response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary",
+            json={
+                "use_pdf_sections": False,
+                "custom_instructions": (
+                    "Focus on limitations and evaluation caveats rather than generic benefits."
+                ),
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["generated"] is True
+        assert body["stored"] is True
+        assert body["summary"]["prompt_version"] == PROMPT_VERSION
+        assert body["summary"]["summary_text"] != cached_text
+
+        stored_summary = get_stored_summary(live_supabase_client, paper_id)
+        assert stored_summary
+        assert stored_summary["summary_text"] == body["summary"]["summary_text"]
+    finally:
+        delete_live_test_paper(live_supabase_client, paper_id)
+
+
+def test_generate_paper_summary_live_stale_prompt_version_regenerates(
+    live_supabase_client,
+    test_app,
+):
+    paper_id = None
+    stale_text = "Stale cached summary from an old prompt version."
+
+    try:
+        paper_id = insert_live_test_paper(
+            live_supabase_client,
+            abstract=(
+                "This paper studies prompt-version cache invalidation for generated "
+                "paper summaries. It verifies that stale prompt metadata should force "
+                "a fresh LLM call instead of reusing old summary text."
+            ),
+        )
+        upsert_live_cached_summary(
+            live_supabase_client,
+            paper_id,
+            summary_text=stale_text,
+            prompt_version="paper_summary_legacy_test",
+        )
+
+        response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary",
+            json={"use_pdf_sections": False},
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["generated"] is True
+        assert body["stored"] is True
+        assert body["summary"]["prompt_version"] == PROMPT_VERSION
+        assert body["summary"]["summary_text"] != stale_text
+
+        stored_summary = get_stored_summary(live_supabase_client, paper_id)
+        assert stored_summary["prompt_version"] == PROMPT_VERSION
+        assert stored_summary["summary_text"] == body["summary"]["summary_text"]
+    finally:
+        delete_live_test_paper(live_supabase_client, paper_id)
+
+
+def test_regenerate_paper_summary_live_replaces_cached_summary(
+    live_supabase_client,
+    test_app,
+):
+    paper_id = None
+    cached_text = "Cached summary that regenerate should replace."
+
+    try:
+        paper_id = insert_live_test_paper(
+            live_supabase_client,
+            abstract=(
+                "This paper studies explicit regeneration of AI paper summaries. "
+                "The service should replace stored summaries when the user requests "
+                "a fresh generation."
+            ),
+        )
+        upsert_live_cached_summary(
+            live_supabase_client,
+            paper_id,
+            summary_text=cached_text,
+        )
+
+        response = TestClient(test_app, raise_server_exceptions=False).post(
+            f"/papers/{paper_id}/summary/regenerate",
+            json={"use_pdf_sections": False},
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["generated"] is True
+        assert body["stored"] is True
+        assert body["summary"]["prompt_version"] == PROMPT_VERSION
+        assert body["summary"]["summary_text"] != cached_text
+
+        stored_summary = get_stored_summary(live_supabase_client, paper_id)
+        assert stored_summary["summary_text"] == body["summary"]["summary_text"]
+    finally:
+        delete_live_test_paper(live_supabase_client, paper_id)
+
+
+# [GenAI Usage 3] Response ends
 # [GenAI Usage] Reflection
 # I used Codex to create opt-in live integration tests instead of adding them to the normal mocked
 # suite. That matters because these tests can spend real OpenAI requests and write to the real
