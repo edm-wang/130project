@@ -1,6 +1,8 @@
 # PaperAgg
 
-Personalized arXiv paper recommendation web app.
+Personalized arXiv paper recommendation web app. Check out the deployed website: https://130project-frontend.vercel.app. 
+
+The rest of the documentation aims for the local development.
 
 ## Project structure
 
