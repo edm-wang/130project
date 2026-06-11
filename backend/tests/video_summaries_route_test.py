@@ -105,6 +105,102 @@ def make_test_client(fake_client):
     return TestClient(app, raise_server_exceptions=False)
 
 
+# [GenAI Usage 2] Codex Prompt
+# Add a quick mocked route-test slice for GET /papers/{paper_id}/video-summary so the test suite
+# covers the "request and later retrieve" video-summary contract from the final report. Keep it
+# offline: fake the paper lookup through FakeSupabaseClient and monkeypatch Supabase Storage reads.
+# Cover stored manifest success, missing manifest 404, and storage/manifest failure 500.
+# [GenAI Usage 2] Response begins:
+def test_get_video_summary_returns_stored_manifest(monkeypatch):
+    paper_id = str(uuid4())
+    client = make_test_client(
+        FakeSupabaseClient(
+            papers=[
+                {
+                    "id": paper_id,
+                    "title": "Stored Video Paper",
+                    "abstract": "Stored video abstract.",
+                }
+            ]
+        )
+    )
+
+    def fake_load_video_summary_from_storage(requested_paper_id):
+        assert requested_paper_id == paper_id
+        return FakeVideoSummaryArtifact()
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "load_video_summary_from_storage",
+        fake_load_video_summary_from_storage,
+    )
+
+    response = client.get(f"/papers/{paper_id}/video-summary")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated"] is False
+    assert body["stored"] is True
+    assert body["video_summary"]["video_path"].endswith("/video.mp4")
+    assert body["video_summary"]["pptx_path"].endswith("/slides.pptx")
+
+
+def test_get_video_summary_returns_404_when_manifest_is_missing(monkeypatch):
+    paper_id = str(uuid4())
+    client = make_test_client(
+        FakeSupabaseClient(
+            papers=[
+                {
+                    "id": paper_id,
+                    "title": "Missing Video Paper",
+                    "abstract": "Missing video abstract.",
+                }
+            ]
+        )
+    )
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "load_video_summary_from_storage",
+        lambda _paper_id: None,
+    )
+
+    response = client.get(f"/papers/{paper_id}/video-summary")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Video summary not found"
+
+
+def test_get_video_summary_maps_storage_error_to_500(monkeypatch):
+    paper_id = str(uuid4())
+    client = make_test_client(
+        FakeSupabaseClient(
+            papers=[
+                {
+                    "id": paper_id,
+                    "title": "Broken Manifest Paper",
+                    "abstract": "Broken manifest abstract.",
+                }
+            ]
+        )
+    )
+
+    def fake_load_video_summary_from_storage(_paper_id):
+        raise VideoSummaryError("Stored video summary manifest is invalid.")
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "load_video_summary_from_storage",
+        fake_load_video_summary_from_storage,
+    )
+
+    response = client.get(f"/papers/{paper_id}/video-summary")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Stored video summary manifest is invalid."
+
+
+# [GenAI Usage 2] Response ends
 def test_generate_video_summary_returns_artifact_response_with_cached_summary(monkeypatch):
     paper_id = str(uuid4())
     image_asset = PdfImageAsset(
