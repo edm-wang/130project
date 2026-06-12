@@ -288,6 +288,188 @@ def test_generate_paper_summary_falls_back_to_abstract_when_pdf_fetch_fails(monk
     assert body["summary"]["prompt_version"] == PROMPT_VERSION
 
 
+# [GenAI Usage 4] Codex Prompt
+# Add a small cache-safety test slice for the final report's AI Summary claims. Keep these mocked
+# and backend-only: stale prompt versions should regenerate, custom instructions should bypass a
+# matching generic cache entry, and regenerate should replace an existing cached summary.
+# [GenAI Usage 4] Response begins:
+def test_generate_paper_summary_regenerates_when_cached_prompt_version_is_stale(monkeypatch):
+    paper_id = str(uuid4())
+    fake_client = FakeSupabaseClient(
+        papers=[
+            {
+                "id": paper_id,
+                "title": "Prompt Version Paper",
+                "abstract": "Prompt version abstract.",
+                "pdf_url": "https://example.com/prompt-version.pdf",
+            }
+        ],
+        summaries=[
+            {
+                "paper_id": paper_id,
+                "summary_text": "Old abstract summary.",
+                "llm_provider": "openai",
+                "llm_model": "old-model",
+                "prompt_version": PROMPT_VERSION,
+            }
+        ],
+    )
+    client = make_test_client(fake_client)
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "fetch_pdf_bytes",
+        lambda _pdf_url: b"%PDF prompt-version",
+    )
+    monkeypatch.setattr(
+        paper_summaries,
+        "extract_pdf_sections",
+        lambda _pdf_bytes: [PaperSection(heading="Method", text="New section text.")],
+    )
+
+    def fake_generate_section_summary_text(title, sections, custom_instructions=None):
+        assert title == "Prompt Version Paper"
+        assert sections[0].heading == "Method"
+        assert custom_instructions is None
+        return GeneratedSummary(
+            summary_text="Fresh section summary.",
+            llm_provider="openai",
+            llm_model="fresh-model",
+            prompt_version=SECTION_PROMPT_VERSION,
+        )
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "generate_section_summary_text",
+        fake_generate_section_summary_text,
+    )
+
+    response = client.post(f"/papers/{paper_id}/summary")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated"] is True
+    assert body["stored"] is True
+    assert body["summary"]["summary_text"] == "Fresh section summary."
+    assert body["summary"]["prompt_version"] == SECTION_PROMPT_VERSION
+    assert fake_client.tables["paper_summaries"][0]["summary_text"] == "Fresh section summary."
+
+
+def test_generate_paper_summary_custom_instructions_bypass_cached_summary(monkeypatch):
+    paper_id = str(uuid4())
+    fake_client = FakeSupabaseClient(
+        papers=[
+            {
+                "id": paper_id,
+                "title": "Custom Instructions Paper",
+                "abstract": "Custom instructions abstract.",
+                "pdf_url": "https://example.com/custom-instructions.pdf",
+            }
+        ],
+        summaries=[
+            {
+                "paper_id": paper_id,
+                "summary_text": "Generic cached section summary.",
+                "llm_provider": "openai",
+                "llm_model": "gpt-4o-mini",
+                "prompt_version": SECTION_PROMPT_VERSION,
+            }
+        ],
+    )
+    client = make_test_client(fake_client)
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "fetch_pdf_bytes",
+        lambda _pdf_url: b"%PDF custom-instructions",
+    )
+    monkeypatch.setattr(
+        paper_summaries,
+        "extract_pdf_sections",
+        lambda _pdf_bytes: [PaperSection(heading="Results", text="Result text.")],
+    )
+
+    def fake_generate_section_summary_text(title, sections, custom_instructions=None):
+        assert title == "Custom Instructions Paper"
+        assert sections[0].heading == "Results"
+        assert custom_instructions == "focus on limitations"
+        return GeneratedSummary(
+            summary_text="Custom focused section summary.",
+            llm_provider="openai",
+            llm_model="custom-model",
+            prompt_version=SECTION_PROMPT_VERSION,
+        )
+
+    monkeypatch.setattr(
+        paper_summaries,
+        "generate_section_summary_text",
+        fake_generate_section_summary_text,
+    )
+
+    response = client.post(
+        f"/papers/{paper_id}/summary",
+        json={"custom_instructions": "focus on limitations"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated"] is True
+    assert body["summary"]["summary_text"] == "Custom focused section summary."
+    assert fake_client.tables["paper_summaries"][0]["summary_text"] == (
+        "Custom focused section summary."
+    )
+
+
+def test_regenerate_paper_summary_replaces_existing_cached_summary(monkeypatch):
+    paper_id = str(uuid4())
+    fake_client = FakeSupabaseClient(
+        papers=[
+            {
+                "id": paper_id,
+                "title": "Replace Cache Paper",
+                "abstract": "Replace cache abstract.",
+            }
+        ],
+        summaries=[
+            {
+                "paper_id": paper_id,
+                "summary_text": "Cached summary to replace.",
+                "llm_provider": "openai",
+                "llm_model": "old-model",
+                "prompt_version": PROMPT_VERSION,
+            }
+        ],
+    )
+    client = make_test_client(fake_client)
+
+    def fake_generate_summary_text(title, abstract, custom_instructions=None):
+        assert title == "Replace Cache Paper"
+        assert abstract == "Replace cache abstract."
+        assert custom_instructions is None
+        return GeneratedSummary(
+            summary_text="Replacement summary.",
+            llm_provider="openai",
+            llm_model="replacement-model",
+            prompt_version=PROMPT_VERSION,
+        )
+
+    monkeypatch.setattr(paper_summaries, "generate_summary_text", fake_generate_summary_text)
+
+    response = client.post(
+        f"/papers/{paper_id}/summary/regenerate",
+        json={"use_pdf_sections": False},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated"] is True
+    assert body["stored"] is True
+    assert body["summary"]["summary_text"] == "Replacement summary."
+    assert body["summary"]["llm_model"] == "replacement-model"
+    assert fake_client.tables["paper_summaries"][0]["summary_text"] == "Replacement summary."
+
+
+# [GenAI Usage 4] Response ends
 def test_generate_paper_summary_can_disable_pdf_fallback(monkeypatch):
     paper_id = str(uuid4())
     client = make_test_client(
